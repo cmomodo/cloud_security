@@ -2,19 +2,45 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { RemovalPolicy } from "aws-cdk-lib";
+import { CognitoConstruct } from './cognito-construct';
 
 export class SecureFileVaultStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    //super construct first
     super(scope, id, props);
 
-    //s3 bucket
-    new s3.Bucket(this, "file-vault27", {
+    // Create S3 bucket
+    const bucket = new s3.Bucket(this, "file-vault27", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
-      enforceSSL: false,
-      versioned: false,
+      enforceSSL: true,
+      versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
+    });
+
+    // Create Cognito resources
+    const cognitoConstruct = new CognitoConstruct(this, 'Cognito', {
+      bucketArn: bucket.bucketArn,
+    });
+
+    // Add CloudFormation Outputs
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: cognitoConstruct.userPool.userPoolId,
+      description: 'The ID of the Cognito User Pool',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: cognitoConstruct.userPoolClient.userPoolClientId,
+      description: 'The ID of the Cognito User Pool Client',
+    });
+
+    new cdk.CfnOutput(this, 'IdentityPoolId', {
+      value: cognitoConstruct.identityPool.ref,
+      description: 'The ID of the Cognito Identity Pool',
+    });
+
+    new cdk.CfnOutput(this, 'BucketName', {
+      value: bucket.bucketName,
+      description: 'The name of the S3 bucket',
     });
   }
 }
