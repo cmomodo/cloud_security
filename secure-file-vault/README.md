@@ -49,7 +49,7 @@ The system design is based on the principles of cloud security and uses AWS serv
 
 - **AWS IAM**: A service that helps you securely control access to AWS services and resources for your users.
 
-![Secure File Vault Architecture](./images/secure-file-vault.png)
+![Secure File Vault Architecture](./IMAGES/secure-file-vault.png)
 
 ## Useful commands
 
