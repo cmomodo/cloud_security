@@ -10,6 +10,9 @@ import * as lambda_python from "@aws-cdk/aws-lambda-python-alpha";
 import * as kms from "aws-cdk-lib/aws-kms";
 
 export class SecureFileVaultStack extends cdk.Stack {
+  public readonly bucket: s3.Bucket;
+  public readonly cognitoConstruct: CognitoConstruct;
+
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -26,22 +29,34 @@ export class SecureFileVaultStack extends cdk.Stack {
 
     if (!defaultEmail) {
       throw new Error(
-        "Missing environment variable: DEFAULT_EMAIL. Please set it in your .env file or environment.",
+        "Missing environment variable: DEFAULT_EMAIL. Please set it in your .env file or environment."
       );
     }
     if (!defaultPhoneNumber) {
       throw new Error(
-        "Missing environment variable: DEFAULT_PHONE_NUMBER. Please set it in your .env file or environment.",
+        "Missing environment variable: DEFAULT_PHONE_NUMBER. Please set it in your .env file or environment."
       );
     }
 
     // Create S3 bucket
-    const bucket = new s3.Bucket(this, "file-vault27", {
+    this.bucket = new s3.Bucket(this, "file-vault27", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.POST,
+            s3.HttpMethods.DELETE,
+          ],
+          allowedOrigins: ["http://localhost:3000"],
+          allowedHeaders: ["*"],
+        },
+      ],
     });
 
     // Create SNS Topic (needed for Lambda environment variables)
@@ -61,13 +76,13 @@ export class SecureFileVaultStack extends cdk.Stack {
         runtime: lambda.Runtime.PYTHON_3_9, // Choose an appropriate Python runtime
         environment: {
           SNS_TOPIC_ARN: snsConstruct.topic.topicArn,
-          S3_BUCKET_NAME: bucket.bucketName,
+          S3_BUCKET_NAME: this.bucket.bucketName,
           S3_BUCKET_REGION: this.region,
           CUSTOMER_EMAIL_SUBJECT_PREFIX: "S3 File Upload Notification", // Optional: customize or remove if default in lambda is preferred
         },
         // Use KMS key to encrypt environment variables
         environmentEncryption: encryptionKey,
-      },
+      }
     );
 
     // Grant the Lambda function permission to publish to the SNS topic
@@ -77,36 +92,36 @@ export class SecureFileVaultStack extends cdk.Stack {
     encryptionKey.grantDecrypt(s3UploadHandler);
 
     // Grant the Lambda function permission to read from the S3 bucket (optional, but good practice if it needs to)
-    // bucket.grantRead(s3UploadHandler); // Uncomment if your lambda needs to read object content or metadata beyond the event
+    // this.bucket.grantRead(s3UploadHandler); // Uncomment if your lambda needs to read object content or metadata beyond the event
 
     // Trigger Lambda on object creation
-    bucket.addEventNotification(
+    this.bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(s3UploadHandler),
+      new s3n.LambdaDestination(s3UploadHandler)
     );
 
     // Create Cognito resources
-    const cognitoConstruct = new CognitoConstruct(this, "Cognito", {
-      bucketArn: bucket.bucketArn,
+    this.cognitoConstruct = new CognitoConstruct(this, "Cognito", {
+      bucketArn: this.bucket.bucketArn,
     });
 
     new cdk.CfnOutput(this, "UserPoolId", {
-      value: cognitoConstruct.userPool.userPoolId,
+      value: this.cognitoConstruct.userPool.userPoolId,
       description: "The ID of the Cognito User Pool",
     });
 
     new cdk.CfnOutput(this, "UserPoolClientId", {
-      value: cognitoConstruct.userPoolClient.userPoolClientId,
+      value: this.cognitoConstruct.userPoolClient.userPoolClientId,
       description: "The ID of the Cognito User Pool Client",
     });
 
     new cdk.CfnOutput(this, "IdentityPoolId", {
-      value: cognitoConstruct.identityPool.ref,
+      value: this.cognitoConstruct.identityPool.ref,
       description: "The ID of the Cognito Identity Pool",
     });
 
     new cdk.CfnOutput(this, "BucketName", {
-      value: bucket.bucketName,
+      value: this.bucket.bucketName,
       description: "The name of the S3 bucket",
     });
   }
