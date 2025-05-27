@@ -1,0 +1,9 @@
+{
+  "SecureFileVaultStack": {
+    "UserPoolClientId": "172qdgljk491v0lnbtpk6mba3n",
+    "UserPoolId": "us-east-1_NUEwLU9uL",
+    "BucketName": "securefilevaultstack-filevault275e1a6fc4-lwpik561taha",
+    "IdentityPoolId": "us-east-1:0f227c8b-0418-4e7f-9613-48493e47744d",
+    "SnsConstructSnsTopicArnFEF09221": "arn:aws:sns:us-east-1:449095351082:SecureFileVaultStack-SnsConstructFileVaultTopicAE1FCED7-lRnixEJPBmdq"
+  }
+}

@@ -1,0 +1,58 @@
+Created folder for customer1
+Created folder for customer2
+Created folder for customer3
+Created folder for customer4
+Created folder for customer5
+Created policy S3AdminFullAccess with ARN: arn:aws:iam::449095351082:policy/S3AdminFullAccess
+Created policy S3WorkerReadDeleteAccess with ARN: arn:aws:iam::449095351082:policy/S3WorkerReadDeleteAccess
+Created user admin1
+Created access key for admin1: AKIAWREBLHMVIAYXT3FN
+Attached policy arn:aws:iam::449095351082:policy/S3AdminFullAccess to user admin1
+Created user admin2
+Created access key for admin2: AKIAWREBLHMVCWQY3OEX
+Attached policy arn:aws:iam::449095351082:policy/S3AdminFullAccess to user admin2
+Created user worker1
+Created access key for worker1: AKIAWREBLHMVATL7LLNT
+Attached policy arn:aws:iam::449095351082:policy/S3WorkerReadDeleteAccess to user worker1
+Created user worker2
+Created access key for worker2: AKIAWREBLHMVINUVBXW7
+Attached policy arn:aws:iam::449095351082:policy/S3WorkerReadDeleteAccess to user worker2
+Created user worker3
+Created access key for worker3: AKIAWREBLHMVJIYMAGEU
+Attached policy arn:aws:iam::449095351082:policy/S3WorkerReadDeleteAccess to user worker3
+Created policy S3Customer1Access with ARN: arn:aws:iam::449095351082:policy/S3Customer1Access
+Created user customer1
+Created access key for customer1: AKIAWREBLHMVII2I4AWG
+Attached policy arn:aws:iam::449095351082:policy/S3Customer1Access to user customer1
+Created policy S3Customer2Access with ARN: arn:aws:iam::449095351082:policy/S3Customer2Access
+Created user customer2
+Created access key for customer2: AKIAWREBLHMVJ2YIEDCF
+Attached policy arn:aws:iam::449095351082:policy/S3Customer2Access to user customer2
+Created policy S3Customer3Access with ARN: arn:aws:iam::449095351082:policy/S3Customer3Access
+Created user customer3
+Created access key for customer3: AKIAWREBLHMVHIZ4M3NO
+Attached policy arn:aws:iam::449095351082:policy/S3Customer3Access to user customer3
+Created policy S3Customer4Access with ARN: arn:aws:iam::449095351082:policy/S3Customer4Access
+Created user customer4
+Created access key for customer4: AKIAWREBLHMVLIEBSKG6
+Attached policy arn:aws:iam::449095351082:policy/S3Customer4Access to user customer4
+Created policy S3Customer5Access with ARN: arn:aws:iam::449095351082:policy/S3Customer5Access
+Created user customer5
+Created access key for customer5: AKIAWREBLHMVEA52BRYQ
+Attached policy arn:aws:iam::449095351082:policy/S3Customer5Access to user customer5
+
+Admin Users:
+Username: admin1, Access Key: AKIAWREBLHMVIAYXT3FN
+Username: admin2, Access Key: AKIAWREBLHMVCWQY3OEX
+
+Worker Users:
+Username: worker1, Access Key: AKIAWREBLHMVATL7LLNT
+Username: worker2, Access Key: AKIAWREBLHMVINUVBXW7
+Username: worker3, Access Key: AKIAWREBLHMVJIYMAGEU
+
+Customer Users:
+Username: customer1, Access Key: AKIAWREBLHMVII2I4AWG
+Username: customer2, Access Key: AKIAWREBLHMVJ2YIEDCF
+Username: customer3, Access Key: AKIAWREBLHMVHIZ4M3NO
+Username: customer4, Access Key: AKIAWREBLHMVLIEBSKG6
+Username: customer5, Access Key: AKIAWREBLHMVEA52BRYQ

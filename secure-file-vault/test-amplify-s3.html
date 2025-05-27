@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amplify S3 Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px; }
+        #test-results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Amplify S3 Connection Test</h1>
+    
+    <div>
+        <h3>Configuration:</h3>
+        <div id="config-display"></div>
+    </div>
+    
+    <div>
+        <h3>Authentication:</h3>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button id="login-btn">Login with Amplify</button>
+        <button id="logout-btn">Logout</button>
+    </div>
+    
+    <div>
+        <h3>S3 Tests:</h3>
+        <button id="credentials-btn">Test AWS Credentials</button>
+        <button id="s3-connection-btn">Test S3 Connection</button>
+        <input type="file" id="test-file" />
+        <button id="s3-upload-btn">Test S3 Upload</button>
+    </div>
+    
+    <div id="test-results"></div>
+
+    <script type="module">
+        import { Amplify } from 'https://cdn.jsdelivr.net/npm/aws-amplify/dist/esm/index.js';
+        import { signIn, signOut, fetchAuthSession } from 'https://cdn.jsdelivr.net/npm/aws-amplify/auth/dist/esm/index.js';
+        import { S3Client, ListObjectsV2Command, PutObjectCommand } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-s3/dist/es/index.js';
+
+        // Configuration from your deployment
+        const config = {
+            userPoolId: 'us-east-1_NUEwLU9uL',
+            userPoolWebClientId: '172qdgljk491v0lnbtpk6mba3n',
+            identityPoolId: 'us-east-1:0f227c8b-0418-4e7f-9613-48493e47744d',
+            region: 'us-east-1',
+            bucketName: 'securefilevaultstack-filevault275e1a6fc4-lwpik561taha'
+        };
+
+        // Configure Amplify
+        Amplify.configure({
+            Auth: {
+                Cognito: {
+                    userPoolId: config.userPoolId,
+                    userPoolClientId: config.userPoolWebClientId,
+                    identityPoolId: config.identityPoolId,
+                    loginWith: {
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        // Display configuration
+        document.getElementById('config-display').innerHTML = `
+            <pre>${JSON.stringify(config, null, 2)}</pre>
+        `;
+
+        // Add event listeners
+        document.getElementById('login-btn').addEventListener('click', async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                addResult('Please enter email and password', 'error');
+                return;
+            }
+            
+            try {
+                addResult('Attempting login...', 'info');
+                const result = await signIn({ username: email, password });
+                addResult(`Login successful: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`Login failed: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', async function() {
+            try {
+                await signOut();
+                addResult('Logout successful', 'success');
+            } catch (error) {
+                addResult(`Logout failed: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('credentials-btn').addEventListener('click', async function() {
+            try {
+                addResult('Fetching AWS credentials...', 'info');
+                const session = await fetchAuthSession();
+                
+                if (session.credentials) {
+                    addResult(`Credentials retrieved successfully:
+- Access Key: ${session.credentials.accessKeyId?.substring(0, 10)}...
+- Session Token: ${session.credentials.sessionToken ? 'Present' : 'Missing'}
+- Identity ID: ${session.identityId || 'Not available'}`, 'success');
+                } else {
+                    addResult('No credentials available. Please login first.', 'error');
+                }
+            } catch (error) {
+                addResult(`Credentials test failed: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('s3-connection-btn').addEventListener('click', async function() {
+            try {
+                addResult('Testing S3 connection...', 'info');
+                const session = await fetchAuthSession();
+                
+                if (!session.credentials) {
+                    addResult('No credentials available. Please login first.', 'error');
+                    return;
+                }
+
+                const s3Client = new S3Client({
+                    region: config.region,
+                    credentials: session.credentials,
+                });
+
+                const command = new ListObjectsV2Command({
+                    Bucket: config.bucketName,
+                    MaxKeys: 1
+                });
+
+                const result = await s3Client.send(command);
+                addResult(`S3 connection successful! Bucket contents: ${result.Contents?.length || 0} objects`, 'success');
+            } catch (error) {
+                addResult(`S3 connection failed: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('s3-upload-btn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('test-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                addResult('Please select a file to test upload', 'error');
+                return;
+            }
+
+            try {
+                addResult('Testing S3 upload...', 'info');
+                const session = await fetchAuthSession();
+                
+                if (!session.credentials) {
+                    addResult('No credentials available. Please login first.', 'error');
+                    return;
+                }
+
+                const s3Client = new S3Client({
+                    region: config.region,
+                    credentials: session.credentials,
+                });
+
+                // Get user identity for path
+                const userId = session.identityId || 'test-user';
+                const key = `customers/${userId}/test-${Date.now()}-${file.name}`;
+
+                const arrayBuffer = await file.arrayBuffer();
+                const command = new PutObjectCommand({
+                    Bucket: config.bucketName,
+                    Key: key,
+                    Body: arrayBuffer,
+                    ContentType: file.type,
+                });
+
+                await s3Client.send(command);
+                addResult(`File uploaded successfully to: ${key}`, 'success');
+            } catch (error) {
+                addResult(`S3 upload failed: ${error.message}`, 'error');
+            }
+        });
+
+        function addResult(message, type) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultItem = document.createElement('div');
+            resultItem.className = `status ${type}`;
+            resultItem.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            resultsDiv.appendChild(resultItem);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        // Initial status
+        addResult('Amplify configured. Ready for testing.', 'info');
+    </script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure File Vault</title>
+    <script type="module" src="./main.js"></script>
+    <script type="module" src="./debug.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #auth-status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+        }
+        #file-operations {
+            display: none;
+        }
+        #file-list {
+            margin-top: 20px;
+        }
+        .file-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .file-actions {
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secure File Vault</h1>
+
+    <div id="auth-container" class="container">
+        <h2>Authentication</h2>
+        <div id="login-form">
+            <div class="form-group">
+                <label for="username">Email:</label>
+                <input type="email" id="username" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            <button id="login-button">Sign In</button>
+        </div>
+        <div id="auth-status"></div>
+        <button id="logout-button" style="display: none; margin-top: 15px;">Sign Out</button>
+    </div>
+
+    <div id="file-operations" class="container">
+        <h2>File Operations</h2>
+        <div class="form-group">
+            <label for="file-upload">Upload File:</label>
+            <input type="file" id="file-upload">
+        </div>
+        <button id="upload-button">Upload</button>
+
+        <div id="file-list">
+            <h3>Your Files</h3>
+            <div id="files-container"></div>
+        </div>
+    </div>
+
+</body>
+</html>

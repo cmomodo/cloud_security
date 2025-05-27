@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Amplify Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px; }
+        #test-results { margin-top: 20px; }
+        input { margin: 5px; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Local Amplify Authentication Test</h1>
+    
+    <div>
+        <h3>Configuration:</h3>
+        <div id="config-display"></div>
+    </div>
+    
+    <div>
+        <h3>Authentication Test:</h3>
+        <input type="email" id="email" placeholder="Email" value="admin@example.com" />
+        <input type="password" id="password" placeholder="Password" value="AdminPass123!" />
+        <button id="login-btn">Test Login</button>
+        <button id="logout-btn">Test Logout</button>
+        <button id="session-btn">Check Session</button>
+    </div>
+    
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Import from compiled local clients instead of CDN
+        import { configureCognito, signIn, signOut, fetchAuthSession } from './src/cognito-client.js';
+
+        // Configuration from deployment
+        const config = {
+            userPoolId: 'us-east-1_NUEwLU9uL',
+            userPoolWebClientId: '172qdgljk491v0lnbtpk6mba3n',
+            identityPoolId: 'us-east-1:0f227c8b-0418-4e7f-9613-48493e47744d',
+            region: 'us-east-1',
+            bucketName: 'securefilevaultstack-filevault275e1a6fc4-lwpik561taha'
+        };
+
+        // Configure Cognito
+        configureCognito(config);
+
+        // Display configuration
+        document.getElementById('config-display').innerHTML = `
+            <pre>${JSON.stringify(config, null, 2)}</pre>
+        `;
+
+        // Add event listeners
+        document.getElementById('login-btn').addEventListener('click', async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                addResult('Please enter email and password', 'error');
+                return;
+            }
+            
+            try {
+                addResult('Testing login...', 'info');
+                const result = await signIn(email, password);
+                addResult(`Login successful! Result: ${JSON.stringify(result, null, 2)}`, 'success');
+                
+                // Also check the session after login
+                const session = await fetchAuthSession();
+                addResult(`Session after login: ${JSON.stringify({
+                    hasTokens: !!session.tokens,
+                    hasCredentials: !!session.credentials,
+                    identityId: session.identityId
+                }, null, 2)}`, 'info');
+                
+            } catch (error) {
+                addResult(`Login failed: ${error.message}`, 'error');
+                console.error('Login error details:', error);
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', async function() {
+            try {
+                addResult('Testing logout...', 'info');
+                await signOut();
+                addResult('Logout successful', 'success');
+            } catch (error) {
+                addResult(`Logout failed: ${error.message}`, 'error');
+                console.error('Logout error:', error);
+            }
+        });
+
+        document.getElementById('session-btn').addEventListener('click', async function() {
+            try {
+                addResult('Checking current session...', 'info');
+                const session = await fetchAuthSession();
+                
+                const sessionInfo = {
+                    isAuthenticated: !!session.tokens,
+                    hasCredentials: !!session.credentials,
+                    identityId: session.identityId,
+                    userGroups: session.tokens?.idToken?.payload?.['cognito:groups'] || []
+                };
+                
+                addResult(`Current session: ${JSON.stringify(sessionInfo, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`Session check failed: ${error.message}`, 'error');
+                console.error('Session error:', error);
+            }
+        });
+
+        function addResult(message, type) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultItem = document.createElement('div');
+            resultItem.className = `status ${type}`;
+            resultItem.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            resultsDiv.appendChild(resultItem);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        // Initial status
+        addResult('Local Amplify test configured. Ready for testing.', 'info');
+    </script>
+</body>
+</html>

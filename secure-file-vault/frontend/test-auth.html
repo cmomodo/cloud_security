@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #f8f8f8;
+            color: #000;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+
+    <div class="container">
+        <h2>Test Authentication</h2>
+        <div class="form-group">
+            <label for="username">Email:</label>
+            <input type="email" id="username" placeholder="Enter your email" value="admin1@example.com">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter your password" value="SecurePassword123!">
+        </div>
+        <button id="test-button">Test Authentication</button>
+        <div id="result" class="info">Results will appear here</div>
+        <pre id="details"></pre>
+    </div>
+
+    <script type="module">
+        // Import AWS SDK modules from CDN for browser usage
+        import { CognitoIdentityProviderClient, InitiateAuthCommand } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-cognito-identity-provider/dist/es/index.js';
+        import { CognitoIdentityClient, GetIdCommand, GetCredentialsForIdentityCommand } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-cognito-identity/dist/es/index.js';
+
+        // Configuration - Update with your actual values
+        const config = {
+            userPoolId: 'us-east-1_NUEwLU9uL',
+            userPoolWebClientId: '172qdgljk491v0lnbtpk6mba3n',
+            identityPoolId: 'us-east-1:0f227c8b-0418-4e7f-9613-48493e47744d',
+            region: 'us-east-1',
+            bucketName: 'securefilevaultstack-filevault275e1a6fc4-lwpik561taha'
+        };
+
+        document.getElementById('test-button').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            const detailsDiv = document.getElementById('details');
+            
+            if (!username || !password) {
+                resultDiv.textContent = 'Please enter both email and password';
+                resultDiv.className = 'error';
+                return;
+            }
+            
+            resultDiv.textContent = 'Testing authentication...';
+            resultDiv.className = 'info';
+            detailsDiv.textContent = '';
+            
+            try {
+                // Create Cognito client
+                const cognitoClient = new CognitoIdentityProviderClient({ region: config.region });
+                
+                // Attempt authentication
+                const command = new InitiateAuthCommand({
+                    AuthFlow: 'USER_PASSWORD_AUTH',
+                    ClientId: config.userPoolWebClientId,
+                    AuthParameters: {
+                        USERNAME: username,
+                        PASSWORD: password,
+                    },
+                });
+                
+                const response = await cognitoClient.send(command);
+                
+                // Handle challenge response
+                if (response.ChallengeName) {
+                    resultDiv.textContent = `Authentication requires challenge: ${response.ChallengeName}`;
+                    resultDiv.className = 'error';
+                    detailsDiv.textContent = JSON.stringify(response, null, 2);
+                    return;
+                }
+                
+                // Handle successful authentication
+                if (response.AuthenticationResult) {
+                    resultDiv.textContent = 'Authentication successful!';
+                    resultDiv.className = 'success';
+                    
+                    // Try to get identity credentials
+                    try {
+                        const identityClient = new CognitoIdentityClient({ region: config.region });
+                        
+                        // Get identity ID
+                        const getIdCommand = new GetIdCommand({
+                            IdentityPoolId: config.identityPoolId,
+                            Logins: {
+                                [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]: 
+                                response.AuthenticationResult.IdToken,
+                            },
+                        });
+                        
+                        const { IdentityId } = await identityClient.send(getIdCommand);
+                        
+                        // Get AWS credentials
+                        const getCredentialsCommand = new GetCredentialsForIdentityCommand({
+                            IdentityId,
+                            Logins: {
+                                [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]: 
+                                response.AuthenticationResult.IdToken,
+                            },
+                        });
+                        
+                        const credentialsResponse = await identityClient.send(getCredentialsCommand);
+                        
+                        if (credentialsResponse.Credentials) {
+                            resultDiv.textContent += ' AWS credentials obtained successfully!';
+                            
+                            // Display token and credential info (safely)
+                            const safeResponse = {
+                                AuthenticationResult: {
+                                    IdToken: response.AuthenticationResult.IdToken.substring(0, 10) + '...',
+                                    AccessToken: response.AuthenticationResult.AccessToken.substring(0, 10) + '...',
+                                    ExpiresIn: response.AuthenticationResult.ExpiresIn,
+                                    TokenType: response.AuthenticationResult.TokenType
+                                },
+                                IdentityId: IdentityId,
+                                Credentials: {
+                                    AccessKeyId: credentialsResponse.Credentials.AccessKeyId.substring(0, 10) + '...',
+                                    SecretKey: '***************',
+                                    SessionToken: credentialsResponse.Credentials.SessionToken.substring(0, 10) + '...',
+                                    Expiration: credentialsResponse.Credentials.Expiration
+                                }
+                            };
+                            
+                            detailsDiv.textContent = JSON.stringify(safeResponse, null, 2);
+                        }
+                    } catch (credError) {
+                        resultDiv.textContent += ' But failed to get AWS credentials.';
+                        detailsDiv.textContent = `Authentication successful, but credential error: ${credError.message}`;
+                    }
+                } else {
+                    resultDiv.textContent = 'Authentication response missing tokens';
+                    resultDiv.className = 'error';
+                    detailsDiv.textContent = JSON.stringify(response, null, 2);
+                }
+            } catch (error) {
+                resultDiv.textContent = `Authentication failed: ${error.message}`;
+                resultDiv.className = 'error';
+                detailsDiv.textContent = error.stack;
+                console.error('Authentication error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

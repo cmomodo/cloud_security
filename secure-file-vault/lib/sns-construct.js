@@ -1,0 +1,30 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SnsConstruct = void 0;
+const sns = require("aws-cdk-lib/aws-sns");
+const constructs_1 = require("constructs");
+const cdk = require("aws-cdk-lib");
+const subs = require("aws-cdk-lib/aws-sns-subscriptions");
+class SnsConstruct extends constructs_1.Construct {
+    constructor(scope, id, props) {
+        super(scope, id);
+        this.topic = new sns.Topic(this, "FileVaultTopic", {
+            displayName: "Secure File Vault Notifications",
+        });
+        //add email subcription
+        if (props?.email) {
+            this.topic.addSubscription(new subs.EmailSubscription(props.email));
+        }
+        // Add SMS subscription if provided
+        if (props?.phoneNumber) {
+            this.topic.addSubscription(new subs.SmsSubscription(props.phoneNumber));
+        }
+        // Output the Topic ARN
+        new cdk.CfnOutput(this, "SnsTopicArn", {
+            value: this.topic.topicArn,
+            description: "The ARN of the SNS Topic",
+        });
+    }
+}
+exports.SnsConstruct = SnsConstruct;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic25zLWNvbnN0cnVjdC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbInNucy1jb25zdHJ1Y3QudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBQUEsMkNBQTJDO0FBQzNDLDJDQUF1QztBQUN2QyxtQ0FBbUM7QUFDbkMsMERBQTBEO0FBTzFELE1BQWEsWUFBYSxTQUFRLHNCQUFTO0lBR3pDLFlBQVksS0FBZ0IsRUFBRSxFQUFVLEVBQUUsS0FBeUI7UUFDakUsS0FBSyxDQUFDLEtBQUssRUFBRSxFQUFFLENBQUMsQ0FBQztRQUVqQixJQUFJLENBQUMsS0FBSyxHQUFHLElBQUksR0FBRyxDQUFDLEtBQUssQ0FBQyxJQUFJLEVBQUUsZ0JBQWdCLEVBQUU7WUFDakQsV0FBVyxFQUFFLGlDQUFpQztTQUMvQyxDQUFDLENBQUM7UUFFSCx1QkFBdUI7UUFDdkIsSUFBSSxLQUFLLEVBQUUsS0FBSyxFQUFFLENBQUM7WUFDakIsSUFBSSxDQUFDLEtBQUssQ0FBQyxlQUFlLENBQUMsSUFBSSxJQUFJLENBQUMsaUJBQWlCLENBQUMsS0FBSyxDQUFDLEtBQUssQ0FBQyxDQUFDLENBQUM7UUFDdEUsQ0FBQztRQUVELG1DQUFtQztRQUNuQyxJQUFJLEtBQUssRUFBRSxXQUFXLEVBQUUsQ0FBQztZQUN2QixJQUFJLENBQUMsS0FBSyxDQUFDLGVBQWUsQ0FDeEIsSUFBSSxJQUFJLENBQUMsZUFBZSxDQUFDLEtBQUssQ0FBQyxXQUFXLENBQUMsQ0FDNUMsQ0FBQztRQUNKLENBQUM7UUFFRCx1QkFBdUI7UUFDdkIsSUFBSSxHQUFHLENBQUMsU0FBUyxDQUFDLElBQUksRUFBRSxhQUFhLEVBQUU7WUFDckMsS0FBSyxFQUFFLElBQUksQ0FBQyxLQUFLLENBQUMsUUFBUTtZQUMxQixXQUFXLEVBQUUsMEJBQTBCO1NBQ3hDLENBQUMsQ0FBQztJQUNMLENBQUM7Q0FDRjtBQTVCRCxvQ0E0QkMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgKiBhcyBzbnMgZnJvbSBcImF3cy1jZGstbGliL2F3cy1zbnNcIjtcbmltcG9ydCB7IENvbnN0cnVjdCB9IGZyb20gXCJjb25zdHJ1Y3RzXCI7XG5pbXBvcnQgKiBhcyBjZGsgZnJvbSBcImF3cy1jZGstbGliXCI7XG5pbXBvcnQgKiBhcyBzdWJzIGZyb20gJ2F3cy1jZGstbGliL2F3cy1zbnMtc3Vic2NyaXB0aW9ucyc7XG5cbmV4cG9ydCBpbnRlcmZhY2UgU25zQ29uc3RydWN0UHJvcHMge1xuICBlbWFpbD86IHN0cmluZztcbiAgcGhvbmVOdW1iZXI/OiBzdHJpbmc7XG59XG5cbmV4cG9ydCBjbGFzcyBTbnNDb25zdHJ1Y3QgZXh0ZW5kcyBDb25zdHJ1Y3Qge1xuICBwdWJsaWMgcmVhZG9ubHkgdG9waWM6IHNucy5Ub3BpYztcblxuICBjb25zdHJ1Y3RvcihzY29wZTogQ29uc3RydWN0LCBpZDogc3RyaW5nLCBwcm9wcz86IFNuc0NvbnN0cnVjdFByb3BzKSB7XG4gICAgc3VwZXIoc2NvcGUsIGlkKTtcblxuICAgIHRoaXMudG9waWMgPSBuZXcgc25zLlRvcGljKHRoaXMsIFwiRmlsZVZhdWx0VG9waWNcIiwge1xuICAgICAgZGlzcGxheU5hbWU6IFwiU2VjdXJlIEZpbGUgVmF1bHQgTm90aWZpY2F0aW9uc1wiLFxuICAgIH0pO1xuXG4gICAgLy9hZGQgZW1haWwgc3ViY3JpcHRpb25cbiAgICBpZiAocHJvcHM/LmVtYWlsKSB7XG4gICAgICB0aGlzLnRvcGljLmFkZFN1YnNjcmlwdGlvbihuZXcgc3Vicy5FbWFpbFN1YnNjcmlwdGlvbihwcm9wcy5lbWFpbCkpO1xuICAgIH1cblxuICAgIC8vIEFkZCBTTVMgc3Vic2NyaXB0aW9uIGlmIHByb3ZpZGVkXG4gICAgaWYgKHByb3BzPy5waG9uZU51bWJlcikge1xuICAgICAgdGhpcy50b3BpYy5hZGRTdWJzY3JpcHRpb24oXG4gICAgICAgIG5ldyBzdWJzLlNtc1N1YnNjcmlwdGlvbihwcm9wcy5waG9uZU51bWJlciksXG4gICAgICApO1xuICAgIH1cblxuICAgIC8vIE91dHB1dCB0aGUgVG9waWMgQVJOXG4gICAgbmV3IGNkay5DZm5PdXRwdXQodGhpcywgXCJTbnNUb3BpY0FyblwiLCB7XG4gICAgICB2YWx1ZTogdGhpcy50b3BpYy50b3BpY0FybixcbiAgICAgIGRlc2NyaXB0aW9uOiBcIlRoZSBBUk4gb2YgdGhlIFNOUyBUb3BpY1wiLFxuICAgIH0pO1xuICB9XG59XG4iXX0=
