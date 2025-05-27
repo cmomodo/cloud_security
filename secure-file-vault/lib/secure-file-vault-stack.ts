@@ -45,6 +45,39 @@ export class SecureFileVaultStack extends cdk.Stack {
       enforceSSL: true,
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
+      
+      // Add lifecycle rules for cost optimization
+      lifecycleRules: [
+        {
+          // Move current versions to IA after 6 months
+          transitions: [
+            {
+              storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+              transitionAfter: cdk.Duration.days(180), // 6 months
+            },
+            {
+              storageClass: s3.StorageClass.GLACIER,
+              transitionAfter: cdk.Duration.days(365), // 1 year
+            },
+          ],
+          // Move noncurrent versions to IA after 30 days
+          noncurrentVersionTransitions: [
+            {
+              storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+              transitionAfter: cdk.Duration.days(30),
+            },
+            {
+              storageClass: s3.StorageClass.GLACIER,
+              transitionAfter: cdk.Duration.days(90),
+            },
+          ],
+          // Delete noncurrent versions after 2 years
+          noncurrentVersionExpiration: cdk.Duration.days(730),
+          // Clean up incomplete multipart uploads after 7 days
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+        },
+      ],
+      
       cors: [
         {
           allowedMethods: [
