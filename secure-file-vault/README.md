@@ -94,6 +94,41 @@ This project uses AWS KMS (Key Management Service) to encrypt sensitive environm
 
 When you deploy the stack with CDK, the environment variables will be automatically encrypted with KMS and securely passed to the Lambda function.
 
+## Python Environment Setup
+
+This project includes a Python virtual environment for Lambda development:
+
+### Activate the Python environment:
+```bash
+source secure_vault/bin/activate
+```
+
+### Verify activation:
+```bash
+which python
+python --version  # Should show Python 3.12.9
+```
+
+### Deactivate when done:
+```bash
+deactivate
+```
+
+### Clean the environment:
+To remove all installed packages and reset the environment:
+```bash
+# Deactivate first if active
+deactivate
+
+# Remove and recreate the environment
+rm -rf secure_vault/
+python3 -m venv secure_vault
+source secure_vault/bin/activate
+
+# Reinstall dependencies
+pip install -r requirements.txt
+```
+
 ## Useful commands
 
 - `npm run build` compile typescript to js
