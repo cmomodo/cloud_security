@@ -91,15 +91,36 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
     try {
       setLoading(true);
       setError(null);
-      
-      // For now, we'll use sample data
-      // In a real implementation, you would fetch from your API or DynamoDB
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      // Sort by timestamp (newest first)
-      const sortedMovies = [...sampleMovies].sort((a, b) => b.timestamp - a.timestamp);
-      setMovies(sortedMovies);
-      
+
+      const url = 'https://imdb236.p.rapidapi.com/movie/byYear/2023/?page=1';
+      const response = await fetch(url, {
+        headers: {
+          'X-RapidAPI-Key': import.meta.env.VITE_RAPIDAPI_KEY,
+          'X-RapidAPI-Host': import.meta.env.VITE_RAPIDAPI_HOST,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch movies');
+      }
+
+      const data = await response.json();
+
+      const apiMovies = (data.results || data.titles || []) as any[];
+      const mapped: Movie[] = apiMovies.map((m: any, index: number) => ({
+        id: m.id || m.imdb_id || String(index),
+        title: m.title || m.name || 'Unknown',
+        year: Number(m.year || m.release_year) || new Date().getFullYear(),
+        genre: Array.isArray(m.genres) ? m.genres.join(', ') : m.genre || 'Unknown',
+        director: m.director || (m.directors && m.directors[0]?.name) || 'Unknown',
+        rating: Number(m.rating?.rating || m.rating || m.score) || 0,
+        plot: m.plot || m.synopsis || m.description || '',
+        poster: m.image || m.poster,
+        timestamp: Date.now(),
+      }));
+
+      setMovies(mapped);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch movies');
     } finally {
