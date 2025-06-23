@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Construct } from "constructs";
+import { securityScoutTableSchema } from "./security-scout-dynamodb-schema";
 
 export class SecurityScoutDynamoDBStack extends cdk.Stack {
   public readonly securityScoutTable: dynamodb.Table;
@@ -8,22 +9,24 @@ export class SecurityScoutDynamoDBStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Create a DynamoDB table for security scout
+    // Create a DynamoDB table using schema configuration
     this.securityScoutTable = new dynamodb.Table(this, "SecurityScoutTable", {
-      // Use a partition key for unique identification
+      // Use partition key from schema
       partitionKey: {
-        name: "id",
-        type: dynamodb.AttributeType.STRING,
+        name: securityScoutTableSchema.partitionKey.name,
+        type: dynamodb.AttributeType[
+          securityScoutTableSchema.partitionKey.type
+        ],
       },
 
-      // Optional: Add a sort key for more complex queries
+      // Add sort key from schema
       sortKey: {
-        name: "timestamp",
-        type: dynamodb.AttributeType.NUMBER,
+        name: securityScoutTableSchema.sortKey.name,
+        type: dynamodb.AttributeType[securityScoutTableSchema.sortKey.type],
       },
 
-      // Configure table name (optional, CDK will generate a name if not specified)
-      tableName: "security-scout-table",
+      // Configure table name from schema
+      tableName: securityScoutTableSchema.tableName,
 
       // Configure billing mode
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST, // Most cost-effective for variable workloads
@@ -34,25 +37,20 @@ export class SecurityScoutDynamoDBStack extends cdk.Stack {
       // Optional: Configure removal policy (DESTROY for dev, RETAIN for prod)
       removalPolicy: cdk.RemovalPolicy.DESTROY,
 
-      // Optional: Configure time-to-live (TTL) for automatic record expiration
-      timeToLiveAttribute: "expiresAt",
+      // Configure time-to-live (TTL) from schema
+      timeToLiveAttribute: securityScoutTableSchema.timeToLiveAttribute,
     });
 
-    // Optional: Add Global Secondary Indexes (GSI) for flexible querying
-    this.securityScoutTable.addGlobalSecondaryIndex({
-      indexName: "TimestampIndex",
-      partitionKey: { name: "timestamp", type: dynamodb.AttributeType.NUMBER },
-      projectionType: dynamodb.ProjectionType.ALL,
-    });
-
-    // Add a second GSI for potential security-related filtering
-    this.securityScoutTable.addGlobalSecondaryIndex({
-      indexName: "SecurityStatusIndex",
-      partitionKey: {
-        name: "securityStatus",
-        type: dynamodb.AttributeType.STRING,
-      },
-      projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+    // Add Global Secondary Indexes from schema
+    securityScoutTableSchema.globalSecondaryIndexes.forEach((gsi) => {
+      this.securityScoutTable.addGlobalSecondaryIndex({
+        indexName: gsi.indexName,
+        partitionKey: {
+          name: gsi.partitionKey.name,
+          type: dynamodb.AttributeType[gsi.partitionKey.type],
+        },
+        projectionType: dynamodb.ProjectionType.ALL,
+      });
     });
   }
 }
