@@ -29,12 +29,12 @@ export class SecureFileVaultStack extends cdk.Stack {
 
     if (!defaultEmail) {
       throw new Error(
-        "Missing environment variable: DEFAULT_EMAIL. Please set it in your .env file or environment."
+        "Missing environment variable: DEFAULT_EMAIL. Please set it in your .env file or environment.",
       );
     }
     if (!defaultPhoneNumber) {
       throw new Error(
-        "Missing environment variable: DEFAULT_PHONE_NUMBER. Please set it in your .env file or environment."
+        "Missing environment variable: DEFAULT_PHONE_NUMBER. Please set it in your .env file or environment.",
       );
     }
 
@@ -45,7 +45,7 @@ export class SecureFileVaultStack extends cdk.Stack {
       enforceSSL: true,
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
-      
+
       // Add lifecycle rules for cost optimization
       lifecycleRules: [
         {
@@ -77,7 +77,7 @@ export class SecureFileVaultStack extends cdk.Stack {
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
         },
       ],
-      
+
       cors: [
         {
           allowedMethods: [
@@ -115,7 +115,7 @@ export class SecureFileVaultStack extends cdk.Stack {
         },
         // Use KMS key to encrypt environment variables
         environmentEncryption: encryptionKey,
-      }
+      },
     );
 
     // Grant the Lambda function permission to publish to the SNS topic
@@ -130,7 +130,7 @@ export class SecureFileVaultStack extends cdk.Stack {
     // Trigger Lambda on object creation
     this.bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(s3UploadHandler)
+      new s3n.LambdaDestination(s3UploadHandler),
     );
 
     // Create Cognito resources

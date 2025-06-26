@@ -102,21 +102,21 @@
             const password = document.getElementById('password').value;
             const resultDiv = document.getElementById('result');
             const detailsDiv = document.getElementById('details');
-            
+
             if (!username || !password) {
                 resultDiv.textContent = 'Please enter both email and password';
                 resultDiv.className = 'error';
                 return;
             }
-            
+
             resultDiv.textContent = 'Testing authentication...';
             resultDiv.className = 'info';
             detailsDiv.textContent = '';
-            
+
             try {
                 // Create Cognito client
                 const cognitoClient = new CognitoIdentityProviderClient({ region: config.region });
-                
+
                 // Attempt authentication
                 const command = new InitiateAuthCommand({
                     AuthFlow: 'USER_PASSWORD_AUTH',
@@ -126,9 +126,9 @@
                         PASSWORD: password,
                     },
                 });
-                
+
                 const response = await cognitoClient.send(command);
-                
+
                 // Handle challenge response
                 if (response.ChallengeName) {
                     resultDiv.textContent = `Authentication requires challenge: ${response.ChallengeName}`;
@@ -136,41 +136,41 @@
                     detailsDiv.textContent = JSON.stringify(response, null, 2);
                     return;
                 }
-                
+
                 // Handle successful authentication
                 if (response.AuthenticationResult) {
                     resultDiv.textContent = 'Authentication successful!';
                     resultDiv.className = 'success';
-                    
+
                     // Try to get identity credentials
                     try {
                         const identityClient = new CognitoIdentityClient({ region: config.region });
-                        
+
                         // Get identity ID
                         const getIdCommand = new GetIdCommand({
                             IdentityPoolId: config.identityPoolId,
                             Logins: {
-                                [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]: 
+                                [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]:
                                 response.AuthenticationResult.IdToken,
                             },
                         });
-                        
+
                         const { IdentityId } = await identityClient.send(getIdCommand);
-                        
+
                         // Get AWS credentials
                         const getCredentialsCommand = new GetCredentialsForIdentityCommand({
                             IdentityId,
                             Logins: {
-                                [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]: 
+                                [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]:
                                 response.AuthenticationResult.IdToken,
                             },
                         });
-                        
+
                         const credentialsResponse = await identityClient.send(getCredentialsCommand);
-                        
+
                         if (credentialsResponse.Credentials) {
                             resultDiv.textContent += ' AWS credentials obtained successfully!';
-                            
+
                             // Display token and credential info (safely)
                             const safeResponse = {
                                 AuthenticationResult: {
@@ -187,7 +187,7 @@
                                     Expiration: credentialsResponse.Credentials.Expiration
                                 }
                             };
-                            
+
                             detailsDiv.textContent = JSON.stringify(safeResponse, null, 2);
                         }
                     } catch (credError) {

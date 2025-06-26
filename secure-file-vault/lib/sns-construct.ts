@@ -1,7 +1,7 @@
 import * as sns from "aws-cdk-lib/aws-sns";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
-import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 
 export interface SnsConstructProps {
   email?: string;
@@ -25,9 +25,7 @@ export class SnsConstruct extends Construct {
 
     // Add SMS subscription if provided
     if (props?.phoneNumber) {
-      this.topic.addSubscription(
-        new subs.SmsSubscription(props.phoneNumber),
-      );
+      this.topic.addSubscription(new subs.SmsSubscription(props.phoneNumber));
     }
 
     // Output the Topic ARN

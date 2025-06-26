@@ -1,8 +1,8 @@
 // Example client-side integration with Amplify
 
-import { Amplify } from 'aws-amplify';
-import { cognitoUserPoolsTokenProvider } from '@aws-amplify/auth/cognito';
-import { fetchAuthSession, signIn, signOut } from 'aws-amplify/auth';
+import { Amplify } from "aws-amplify";
+import { cognitoUserPoolsTokenProvider } from "@aws-amplify/auth/cognito";
+import { fetchAuthSession, signIn, signOut } from "aws-amplify/auth";
 
 // Function to configure Amplify with your backend
 export function configureAmplify(config: {
@@ -35,7 +35,7 @@ export async function login(username: string, password: string) {
     });
     return signInOutput;
   } catch (error) {
-    console.error('Error signing in:', error);
+    console.error("Error signing in:", error);
     throw error;
   }
 }
@@ -45,7 +45,7 @@ export async function logout() {
     await signOut();
     return { success: true };
   } catch (error) {
-    console.error('Error signing out:', error);
+    console.error("Error signing out:", error);
     throw error;
   }
 }
@@ -55,7 +55,7 @@ export async function getCurrentSession() {
     const session = await fetchAuthSession();
     return session;
   } catch (error) {
-    console.error('Error getting current session:', error);
+    console.error("Error getting current session:", error);
     return null;
   }
 }
@@ -65,7 +65,7 @@ export async function getCurrentCredentials() {
     const session = await fetchAuthSession();
     return session.credentials;
   } catch (error) {
-    console.error('Error getting credentials:', error);
+    console.error("Error getting credentials:", error);
     return null;
   }
 }
@@ -80,10 +80,10 @@ export async function getIdToken(): Promise<string | null> {
       return authTokens.idToken.toString(); // Access the idToken and convert to string
     }
     // It's possible there's no ID token (e.g., if not signed in or scope doesn't include openid)
-    console.warn('ID token not found in the current authentication tokens.');
+    console.warn("ID token not found in the current authentication tokens.");
     return null;
   } catch (error) {
-    console.error('Error getting ID token:', error);
+    console.error("Error getting ID token:", error);
     return null;
   }
 }

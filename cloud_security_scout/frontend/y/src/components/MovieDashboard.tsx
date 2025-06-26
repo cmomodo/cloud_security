@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
+import React, { useState, useEffect } from "react";
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../../amplify/data/resource";
 
 interface MovieDashboardProps {
   client: ReturnType<typeof generateClient<Schema>>;
@@ -8,6 +8,7 @@ interface MovieDashboardProps {
 
 interface Movie {
   id: string;
+  imdb_id?: string;
   title: string;
   year: number;
   genre: string;
@@ -26,65 +27,71 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
   // Sample movie data for demonstration
   const sampleMovies: Movie[] = [
     {
-      id: '1',
-      title: 'The Matrix',
+      id: "1",
+      imdb_id: "tt0133093",
+      title: "The Matrix",
       year: 1999,
-      genre: 'Sci-Fi',
-      director: 'The Wachowskis',
+      genre: "Sci-Fi",
+      director: "The Wachowskis",
       rating: 8.7,
-      plot: 'A computer programmer discovers reality as he knows it is a simulation.',
-      timestamp: Date.now() - 1000000
+      plot: "A computer programmer discovers reality as he knows it is a simulation.",
+      timestamp: Date.now() - 1000000,
     },
     {
-      id: '2',
-      title: 'Inception',
+      id: "2",
+      imdb_id: "tt1375666",
+      title: "Inception",
       year: 2010,
-      genre: 'Sci-Fi',
-      director: 'Christopher Nolan',
+      genre: "Sci-Fi",
+      director: "Christopher Nolan",
       rating: 8.8,
-      plot: 'A thief who steals corporate secrets through dream-sharing technology.',
-      timestamp: Date.now() - 2000000
+      plot: "A thief who steals corporate secrets through dream-sharing technology.",
+      timestamp: Date.now() - 2000000,
     },
     {
-      id: '3',
-      title: 'The Dark Knight',
+      id: "3",
+      imdb_id: "tt0468569",
+      title: "The Dark Knight",
       year: 2008,
-      genre: 'Action',
-      director: 'Christopher Nolan',
+      genre: "Action",
+      director: "Christopher Nolan",
       rating: 9.0,
-      plot: 'Batman faces his greatest psychological and physical tests.',
-      timestamp: Date.now() - 3000000
+      plot: "Batman faces his greatest psychological and physical tests.",
+      timestamp: Date.now() - 3000000,
     },
     {
-      id: '4',
-      title: 'Pulp Fiction',
+      id: "4",
+      imdb_id: "tt0110912",
+      title: "Pulp Fiction",
       year: 1994,
-      genre: 'Crime',
-      director: 'Quentin Tarantino',
+      genre: "Crime",
+      director: "Quentin Tarantino",
       rating: 8.9,
-      plot: 'The lives of two mob hitmen, a boxer, and others intertwine.',
-      timestamp: Date.now() - 4000000
+      plot: "The lives of two mob hitmen, a boxer, and others intertwine.",
+      timestamp: Date.now() - 4000000,
     },
     {
-      id: '5',
-      title: 'The Shawshank Redemption',
+      id: "5",
+      imdb_id: "tt0111161",
+      title: "The Shawshank Redemption",
       year: 1994,
-      genre: 'Drama',
-      director: 'Frank Darabont',
+      genre: "Drama",
+      director: "Frank Darabont",
       rating: 9.3,
-      plot: 'Two imprisoned men bond over years, finding solace and redemption.',
-      timestamp: Date.now() - 5000000
+      plot: "Two imprisoned men bond over years, finding solace and redemption.",
+      timestamp: Date.now() - 5000000,
     },
     {
-      id: '6',
-      title: 'Forrest Gump',
+      id: "6",
+      imdb_id: "tt0109830",
+      title: "Forrest Gump",
       year: 1994,
-      genre: 'Drama',
-      director: 'Robert Zemeckis',
+      genre: "Drama",
+      director: "Robert Zemeckis",
       rating: 8.8,
-      plot: 'A man with low IQ accomplishes great things and influences others.',
-      timestamp: Date.now() - 6000000
-    }
+      plot: "A man with low IQ accomplishes great things and influences others.",
+      timestamp: Date.now() - 6000000,
+    },
   ];
 
   const fetchMovies = async () => {
@@ -92,37 +99,76 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
       setLoading(true);
       setError(null);
 
-      const url = 'https://imdb236.p.rapidapi.com/movie/byYear/2023/?page=1';
+      // Fetch from Amplify DynamoDB
+      const { data: movieRecords } = await client.models.Movie.list();
+
+      const dbMovies: Movie[] = movieRecords.map((record) => ({
+        id: record.id,
+        imdb_id: (record as any).imdb_id || undefined,
+        title: record.title,
+        year: record.year || new Date().getFullYear(),
+        genre: record.genre || "Unknown",
+        director: record.director || "Unknown",
+        rating: record.rating || 0,
+        plot: record.plot || "",
+        poster: record.poster || undefined,
+        timestamp: new Date(record.timestamp).getTime(),
+      }));
+
+      if (dbMovies.length > 0) {
+        setMovies(dbMovies);
+        return;
+      }
+
+      // If no movies in DB, try to fetch from API and save to DB
+      const url =
+        "https://imdb236.p.rapidapi.com/api/imdb/india/trending-tamil";
       const response = await fetch(url, {
         headers: {
-          'X-RapidAPI-Key': import.meta.env.VITE_RAPIDAPI_KEY,
-          'X-RapidAPI-Host': import.meta.env.VITE_RAPIDAPI_HOST,
+          "x-rapidapi-key": import.meta.env.VITE_RAPIDAPI_KEY,
+          "x-rapidapi-host": import.meta.env.VITE_RAPIDAPI_HOST,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch movies');
+        throw new Error("Failed to fetch movies");
       }
 
       const data = await response.json();
 
-      const apiMovies = (data.results || data.titles || []) as any[];
-      const mapped: Movie[] = apiMovies.map((m: any, index: number) => ({
-        id: m.id || m.imdb_id || String(index),
-        title: m.title || m.name || 'Unknown',
-        year: Number(m.year || m.release_year) || new Date().getFullYear(),
-        genre: Array.isArray(m.genres) ? m.genres.join(', ') : m.genre || 'Unknown',
-        director: m.director || (m.directors && m.directors[0]?.name) || 'Unknown',
-        rating: Number(m.rating?.rating || m.rating || m.score) || 0,
-        plot: m.plot || m.synopsis || m.description || '',
-        poster: m.image || m.poster,
+      const mapped: Movie[] = data.map((m: any, index: number) => ({
+        id: m.id || String(index + 1),
+        imdb_id: m.imdb_id || m.id,
+        title: m.primaryTitle || m.title || "Unknown",
+        year: Number(m.startYear) || new Date().getFullYear(),
+        genre: Array.isArray(m.genres) ? m.genres.join(", ") : "Unknown",
+        director: "Unknown",
+        rating: Number(m.averageRating) || 0,
+        plot: m.description || "",
+        poster: m.primaryImage,
         timestamp: Date.now(),
       }));
 
-      setMovies(mapped);
+      // Save movies to DynamoDB
+      for (const movie of mapped) {
+        await client.models.Movie.create({
+          imdb_id: movie.imdb_id,
+          title: movie.title,
+          year: movie.year,
+          genre: movie.genre,
+          director: movie.director,
+          rating: movie.rating,
+          plot: movie.plot,
+          poster: movie.poster,
+          timestamp: new Date(movie.timestamp).toISOString(),
+        } as any);
+      }
 
+      setMovies(mapped);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch movies');
+      setError(err instanceof Error ? err.message : "Failed to fetch movies");
+      // Fallback to sample data if API fails
+      setMovies(sampleMovies);
     } finally {
       setLoading(false);
     }
@@ -133,12 +179,12 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
   }, []);
 
   const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -161,35 +207,45 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
   return (
     <div className="movie-dashboard">
       <div className="dashboard-header">
-        <h2 style={{ color: 'white', marginBottom: '10px' }}>Latest Movies</h2>
-        <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '20px' }}>
-          Showing {movies.length} movies
+        <h2 style={{ color: "white", marginBottom: "10px" }}>
+          Movie Dashboard
+        </h2>
+        <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "20px" }}>
+          Showing {movies.length} movies from DynamoDB
         </p>
         <button className="refresh-button" onClick={fetchMovies}>
           Refresh
         </button>
       </div>
-      
+
       <div className="movie-grid">
         {movies.map((movie) => (
           <div key={movie.id} className="movie-card">
             <div className="movie-title">{movie.title}</div>
             <div className="movie-details">
-              <p><strong>Year:</strong> {movie.year}</p>
-              <p><strong>Genre:</strong> {movie.genre}</p>
-              <p><strong>Director:</strong> {movie.director}</p>
-              <p><strong>Plot:</strong> {movie.plot}</p>
-              <p><strong>Added:</strong> {formatTimestamp(movie.timestamp)}</p>
+              <p>
+                <strong>Year:</strong> {movie.year}
+              </p>
+              <p>
+                <strong>Genre:</strong> {movie.genre}
+              </p>
+              <p>
+                <strong>Director:</strong> {movie.director}
+              </p>
+              <p>
+                <strong>Plot:</strong> {movie.plot}
+              </p>
+              <p>
+                <strong>Added:</strong> {formatTimestamp(movie.timestamp)}
+              </p>
             </div>
-            <div className="movie-rating">
-              ⭐ {movie.rating}/10
-            </div>
+            <div className="movie-rating">⭐ {movie.rating}/10</div>
           </div>
         ))}
       </div>
-      
+
       {movies.length === 0 && (
-        <div style={{ textAlign: 'center', color: 'white', marginTop: '50px' }}>
+        <div style={{ textAlign: "center", color: "white", marginTop: "50px" }}>
           <h3>No movies found</h3>
           <p>Start by adding some movies to your collection!</p>
         </div>

@@ -11,89 +11,86 @@ const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 // Function to get authenticated S3 client
 async function getAuthenticatedS3Client() {
-    try {
-        const session = await (0, cognito_client_1.getCurrentCredentials)();
-        if (!session?.credentials) {
-            throw new Error('No credentials available. Please login first.');
-        }
-        return new client_s3_1.S3Client({
-            region: process.env.REGION || 'us-east-1',
-            credentials: {
-                accessKeyId: session.credentials.accessKeyId,
-                secretAccessKey: session.credentials.secretAccessKey,
-                sessionToken: session.credentials.sessionToken,
-            },
-        });
+  try {
+    const session = await (0, cognito_client_1.getCurrentCredentials)();
+    if (!session?.credentials) {
+      throw new Error("No credentials available. Please login first.");
     }
-    catch (error) {
-        console.error('Error getting authenticated S3 client:', error);
-        throw error;
-    }
+    return new client_s3_1.S3Client({
+      region: process.env.REGION || "us-east-1",
+      credentials: {
+        accessKeyId: session.credentials.accessKeyId,
+        secretAccessKey: session.credentials.secretAccessKey,
+        sessionToken: session.credentials.sessionToken,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting authenticated S3 client:", error);
+    throw error;
+  }
 }
 // Upload file to S3
 async function uploadFile(file, key, bucketName) {
-    try {
-        const s3Client = await getAuthenticatedS3Client();
-        const arrayBuffer = await file.arrayBuffer();
-        const command = new client_s3_1.PutObjectCommand({
-            Bucket: bucketName,
-            Key: key,
-            Body: Buffer.from(arrayBuffer),
-            ContentType: file.type,
-        });
-        await s3Client.send(command);
-        return key;
-    }
-    catch (error) {
-        console.error('Error uploading file:', error);
-        throw error;
-    }
+  try {
+    const s3Client = await getAuthenticatedS3Client();
+    const arrayBuffer = await file.arrayBuffer();
+    const command = new client_s3_1.PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: Buffer.from(arrayBuffer),
+      ContentType: file.type,
+    });
+    await s3Client.send(command);
+    return key;
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
 }
 // Generate a pre-signed URL for downloading a file
 async function getSignedDownloadUrl(key, bucketName, expiresIn = 3600) {
-    try {
-        const s3Client = await getAuthenticatedS3Client();
-        const command = new client_s3_1.GetObjectCommand({
-            Bucket: bucketName,
-            Key: key,
-        });
-        return await (0, s3_request_presigner_1.getSignedUrl)(s3Client, command, { expiresIn });
-    }
-    catch (error) {
-        console.error('Error generating signed URL:', error);
-        throw error;
-    }
+  try {
+    const s3Client = await getAuthenticatedS3Client();
+    const command = new client_s3_1.GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+    return await (0, s3_request_presigner_1.getSignedUrl)(s3Client, command, {
+      expiresIn,
+    });
+  } catch (error) {
+    console.error("Error generating signed URL:", error);
+    throw error;
+  }
 }
 // List files in a folder
 async function listFiles(prefix, bucketName) {
-    try {
-        const s3Client = await getAuthenticatedS3Client();
-        const command = new client_s3_1.ListObjectsV2Command({
-            Bucket: bucketName,
-            Prefix: prefix,
-        });
-        const response = await s3Client.send(command);
-        return response.Contents || [];
-    }
-    catch (error) {
-        console.error('Error listing files:', error);
-        throw error;
-    }
+  try {
+    const s3Client = await getAuthenticatedS3Client();
+    const command = new client_s3_1.ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+    });
+    const response = await s3Client.send(command);
+    return response.Contents || [];
+  } catch (error) {
+    console.error("Error listing files:", error);
+    throw error;
+  }
 }
 // Delete a file
 async function deleteFile(key, bucketName) {
-    try {
-        const s3Client = await getAuthenticatedS3Client();
-        const command = new client_s3_1.DeleteObjectCommand({
-            Bucket: bucketName,
-            Key: key,
-        });
-        await s3Client.send(command);
-        return true;
-    }
-    catch (error) {
-        console.error('Error deleting file:', error);
-        throw error;
-    }
+  try {
+    const s3Client = await getAuthenticatedS3Client();
+    const command = new client_s3_1.DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+    await s3Client.send(command);
+    return true;
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    throw error;
+  }
 }
 //# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiczMtY2xpZW50LmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiczMtY2xpZW50LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSw4REFBOEQ7O0FBTzlELDREQW1CQztBQUdELGdDQWtCQztBQUdELG9EQWFDO0FBR0QsOEJBY0M7QUFHRCxnQ0FjQztBQS9GRCxxREFBeUQ7QUFDekQsa0RBQTZIO0FBQzdILHdFQUE2RDtBQUU3RCwwQ0FBMEM7QUFDbkMsS0FBSyxVQUFVLHdCQUF3QjtJQUM1QyxJQUFJLENBQUM7UUFDSCxNQUFNLE9BQU8sR0FBRyxNQUFNLElBQUEsc0NBQXFCLEdBQUUsQ0FBQztRQUM5QyxJQUFJLENBQUMsT0FBTyxFQUFFLFdBQVcsRUFBRSxDQUFDO1lBQzFCLE1BQU0sSUFBSSxLQUFLLENBQUMsK0NBQStDLENBQUMsQ0FBQztRQUNuRSxDQUFDO1FBRUQsT0FBTyxJQUFJLG9CQUFRLENBQUM7WUFDbEIsTUFBTSxFQUFFLE9BQU8sQ0FBQyxHQUFHLENBQUMsTUFBTSxJQUFJLFdBQVc7WUFDekMsV0FBVyxFQUFFO2dCQUNYLFdBQVcsRUFBRSxPQUFPLENBQUMsV0FBVyxDQUFDLFdBQVc7Z0JBQzVDLGVBQWUsRUFBRSxPQUFPLENBQUMsV0FBVyxDQUFDLGVBQWU7Z0JBQ3BELFlBQVksRUFBRSxPQUFPLENBQUMsV0FBVyxDQUFDLFlBQVk7YUFDL0M7U0FDRixDQUFDLENBQUM7SUFDTCxDQUFDO0lBQUMsT0FBTyxLQUFLLEVBQUUsQ0FBQztRQUNmLE9BQU8sQ0FBQyxLQUFLLENBQUMsd0NBQXdDLEVBQUUsS0FBSyxDQUFDLENBQUM7UUFDL0QsTUFBTSxLQUFLLENBQUM7SUFDZCxDQUFDO0FBQ0gsQ0FBQztBQUVELG9CQUFvQjtBQUNiLEtBQUssVUFBVSxVQUFVLENBQUMsSUFBVSxFQUFFLEdBQVcsRUFBRSxVQUFrQjtJQUMxRSxJQUFJLENBQUM7UUFDSCxNQUFNLFFBQVEsR0FBRyxNQUFNLHdCQUF3QixFQUFFLENBQUM7UUFDbEQsTUFBTSxXQUFXLEdBQUcsTUFBTSxJQUFJLENBQUMsV0FBVyxFQUFFLENBQUM7UUFFN0MsTUFBTSxPQUFPLEdBQUcsSUFBSSw0QkFBZ0IsQ0FBQztZQUNuQyxNQUFNLEVBQUUsVUFBVTtZQUNsQixHQUFHLEVBQUUsR0FBRztZQUNSLElBQUksRUFBRSxNQUFNLENBQUMsSUFBSSxDQUFDLFdBQVcsQ0FBQztZQUM5QixXQUFXLEVBQUUsSUFBSSxDQUFDLElBQUk7U0FDdkIsQ0FBQyxDQUFDO1FBRUgsTUFBTSxRQUFRLENBQUMsSUFBSSxDQUFDLE9BQU8sQ0FBQyxDQUFDO1FBQzdCLE9BQU8sR0FBRyxDQUFDO0lBQ2IsQ0FBQztJQUFDLE9BQU8sS0FBSyxFQUFFLENBQUM7UUFDZixPQUFPLENBQUMsS0FBSyxDQUFDLHVCQUF1QixFQUFFLEtBQUssQ0FBQyxDQUFDO1FBQzlDLE1BQU0sS0FBSyxDQUFDO0lBQ2QsQ0FBQztBQUNILENBQUM7QUFFRCxtREFBbUQ7QUFDNUMsS0FBSyxVQUFVLG9CQUFvQixDQUFDLEdBQVcsRUFBRSxVQUFrQixFQUFFLFNBQVMsR0FBRyxJQUFJO0lBQzFGLElBQUksQ0FBQztRQUNILE1BQU0sUUFBUSxHQUFHLE1BQU0sd0JBQXdCLEVBQUUsQ0FBQztRQUNsRCxNQUFNLE9BQU8sR0FBRyxJQUFJLDRCQUFnQixDQUFDO1lBQ25DLE1BQU0sRUFBRSxVQUFVO1lBQ2xCLEdBQUcsRUFBRSxHQUFHO1NBQ1QsQ0FBQyxDQUFDO1FBRUgsT0FBTyxNQUFNLElBQUEsbUNBQVksRUFBQyxRQUFRLEVBQUUsT0FBTyxFQUFFLEVBQUUsU0FBUyxFQUFFLENBQUMsQ0FBQztJQUM5RCxDQUFDO0lBQUMsT0FBTyxLQUFLLEVBQUUsQ0FBQztRQUNmLE9BQU8sQ0FBQyxLQUFLLENBQUMsOEJBQThCLEVBQUUsS0FBSyxDQUFDLENBQUM7UUFDckQsTUFBTSxLQUFLLENBQUM7SUFDZCxDQUFDO0FBQ0gsQ0FBQztBQUVELHlCQUF5QjtBQUNsQixLQUFLLFVBQVUsU0FBUyxDQUFDLE1BQWMsRUFBRSxVQUFrQjtJQUNoRSxJQUFJLENBQUM7UUFDSCxNQUFNLFFBQVEsR0FBRyxNQUFNLHdCQUF3QixFQUFFLENBQUM7UUFDbEQsTUFBTSxPQUFPLEdBQUcsSUFBSSxnQ0FBb0IsQ0FBQztZQUN2QyxNQUFNLEVBQUUsVUFBVTtZQUNsQixNQUFNLEVBQUUsTUFBTTtTQUNmLENBQUMsQ0FBQztRQUVILE1BQU0sUUFBUSxHQUFHLE1BQU0sUUFBUSxDQUFDLElBQUksQ0FBQyxPQUFPLENBQUMsQ0FBQztRQUM5QyxPQUFPLFFBQVEsQ0FBQyxRQUFRLElBQUksRUFBRSxDQUFDO0lBQ2pDLENBQUM7SUFBQyxPQUFPLEtBQUssRUFBRSxDQUFDO1FBQ2YsT0FBTyxDQUFDLEtBQUssQ0FBQyxzQkFBc0IsRUFBRSxLQUFLLENBQUMsQ0FBQztRQUM3QyxNQUFNLEtBQUssQ0FBQztJQUNkLENBQUM7QUFDSCxDQUFDO0FBRUQsZ0JBQWdCO0FBQ1QsS0FBSyxVQUFVLFVBQVUsQ0FBQyxHQUFXLEVBQUUsVUFBa0I7SUFDOUQsSUFBSSxDQUFDO1FBQ0gsTUFBTSxRQUFRLEdBQUcsTUFBTSx3QkFBd0IsRUFBRSxDQUFDO1FBQ2xELE1BQU0sT0FBTyxHQUFHLElBQUksK0JBQW1CLENBQUM7WUFDdEMsTUFBTSxFQUFFLFVBQVU7WUFDbEIsR0FBRyxFQUFFLEdBQUc7U0FDVCxDQUFDLENBQUM7UUFFSCxNQUFNLFFBQVEsQ0FBQyxJQUFJLENBQUMsT0FBTyxDQUFDLENBQUM7UUFDN0IsT0FBTyxJQUFJLENBQUM7SUFDZCxDQUFDO0lBQUMsT0FBTyxLQUFLLEVBQUUsQ0FBQztRQUNmLE9BQU8sQ0FBQyxLQUFLLENBQUMsc0JBQXNCLEVBQUUsS0FBSyxDQUFDLENBQUM7UUFDN0MsTUFBTSxLQUFLLENBQUM7SUFDZCxDQUFDO0FBQ0gsQ0FBQyIsInNvdXJjZXNDb250ZW50IjpbIi8vIFMzIGNsaWVudCBpbnRlZ3JhdGlvbiB1c2luZyBkaXJlY3QgQ29nbml0byBBdXRoIGNyZWRlbnRpYWxzXG5cbmltcG9ydCB7IGdldEN1cnJlbnRDcmVkZW50aWFscyB9IGZyb20gJy4vY29nbml0by1jbGllbnQnO1xuaW1wb3J0IHsgUzNDbGllbnQsIFB1dE9iamVjdENvbW1hbmQsIEdldE9iamVjdENvbW1hbmQsIExpc3RPYmplY3RzVjJDb21tYW5kLCBEZWxldGVPYmplY3RDb21tYW5kIH0gZnJvbSAnQGF3cy1zZGsvY2xpZW50LXMzJztcbmltcG9ydCB7IGdldFNpZ25lZFVybCB9IGZyb20gJ0Bhd3Mtc2RrL3MzLXJlcXVlc3QtcHJlc2lnbmVyJztcblxuLy8gRnVuY3Rpb24gdG8gZ2V0IGF1dGhlbnRpY2F0ZWQgUzMgY2xpZW50XG5leHBvcnQgYXN5bmMgZnVuY3Rpb24gZ2V0QXV0aGVudGljYXRlZFMzQ2xpZW50KCk6IFByb21pc2U8UzNDbGllbnQ+IHtcbiAgdHJ5IHtcbiAgICBjb25zdCBzZXNzaW9uID0gYXdhaXQgZ2V0Q3VycmVudENyZWRlbnRpYWxzKCk7XG4gICAgaWYgKCFzZXNzaW9uPy5jcmVkZW50aWFscykge1xuICAgICAgdGhyb3cgbmV3IEVycm9yKCdObyBjcmVkZW50aWFscyBhdmFpbGFibGUuIFBsZWFzZSBsb2dpbiBmaXJzdC4nKTtcbiAgICB9XG5cbiAgICByZXR1cm4gbmV3IFMzQ2xpZW50KHtcbiAgICAgIHJlZ2lvbjogcHJvY2Vzcy5lbnYuUkVHSU9OIHx8ICd1cy1lYXN0LTEnLFxuICAgICAgY3JlZGVudGlhbHM6IHtcbiAgICAgICAgYWNjZXNzS2V5SWQ6IHNlc3Npb24uY3JlZGVudGlhbHMuYWNjZXNzS2V5SWQsXG4gICAgICAgIHNlY3JldEFjY2Vzc0tleTogc2Vzc2lvbi5jcmVkZW50aWFscy5zZWNyZXRBY2Nlc3NLZXksXG4gICAgICAgIHNlc3Npb25Ub2tlbjogc2Vzc2lvbi5jcmVkZW50aWFscy5zZXNzaW9uVG9rZW4sXG4gICAgICB9LFxuICAgIH0pO1xuICB9IGNhdGNoIChlcnJvcikge1xuICAgIGNvbnNvbGUuZXJyb3IoJ0Vycm9yIGdldHRpbmcgYXV0aGVudGljYXRlZCBTMyBjbGllbnQ6JywgZXJyb3IpO1xuICAgIHRocm93IGVycm9yO1xuICB9XG59XG5cbi8vIFVwbG9hZCBmaWxlIHRvIFMzXG5leHBvcnQgYXN5bmMgZnVuY3Rpb24gdXBsb2FkRmlsZShmaWxlOiBGaWxlLCBrZXk6IHN0cmluZywgYnVja2V0TmFtZTogc3RyaW5nKTogUHJvbWlzZTxzdHJpbmc+IHtcbiAgdHJ5IHtcbiAgICBjb25zdCBzM0NsaWVudCA9IGF3YWl0IGdldEF1dGhlbnRpY2F0ZWRTM0NsaWVudCgpO1xuICAgIGNvbnN0IGFycmF5QnVmZmVyID0gYXdhaXQgZmlsZS5hcnJheUJ1ZmZlcigpO1xuICAgIFxuICAgIGNvbnN0IGNvbW1hbmQgPSBuZXcgUHV0T2JqZWN0Q29tbWFuZCh7XG4gICAgICBCdWNrZXQ6IGJ1Y2tldE5hbWUsXG4gICAgICBLZXk6IGtleSxcbiAgICAgIEJvZHk6IEJ1ZmZlci5mcm9tKGFycmF5QnVmZmVyKSxcbiAgICAgIENvbnRlbnRUeXBlOiBmaWxlLnR5cGUsXG4gICAgfSk7XG4gICAgXG4gICAgYXdhaXQgczNDbGllbnQuc2VuZChjb21tYW5kKTtcbiAgICByZXR1cm4ga2V5O1xuICB9IGNhdGNoIChlcnJvcikge1xuICAgIGNvbnNvbGUuZXJyb3IoJ0Vycm9yIHVwbG9hZGluZyBmaWxlOicsIGVycm9yKTtcbiAgICB0aHJvdyBlcnJvcjtcbiAgfVxufVxuXG4vLyBHZW5lcmF0ZSBhIHByZS1zaWduZWQgVVJMIGZvciBkb3dubG9hZGluZyBhIGZpbGVcbmV4cG9ydCBhc3luYyBmdW5jdGlvbiBnZXRTaWduZWREb3dubG9hZFVybChrZXk6IHN0cmluZywgYnVja2V0TmFtZTogc3RyaW5nLCBleHBpcmVzSW4gPSAzNjAwKTogUHJvbWlzZTxzdHJpbmc+IHtcbiAgdHJ5IHtcbiAgICBjb25zdCBzM0NsaWVudCA9IGF3YWl0IGdldEF1dGhlbnRpY2F0ZWRTM0NsaWVudCgpO1xuICAgIGNvbnN0IGNvbW1hbmQgPSBuZXcgR2V0T2JqZWN0Q29tbWFuZCh7XG4gICAgICBCdWNrZXQ6IGJ1Y2tldE5hbWUsXG4gICAgICBLZXk6IGtleSxcbiAgICB9KTtcbiAgICBcbiAgICByZXR1cm4gYXdhaXQgZ2V0U2lnbmVkVXJsKHMzQ2xpZW50LCBjb21tYW5kLCB7IGV4cGlyZXNJbiB9KTtcbiAgfSBjYXRjaCAoZXJyb3IpIHtcbiAgICBjb25zb2xlLmVycm9yKCdFcnJvciBnZW5lcmF0aW5nIHNpZ25lZCBVUkw6JywgZXJyb3IpO1xuICAgIHRocm93IGVycm9yO1xuICB9XG59XG5cbi8vIExpc3QgZmlsZXMgaW4gYSBmb2xkZXJcbmV4cG9ydCBhc3luYyBmdW5jdGlvbiBsaXN0RmlsZXMocHJlZml4OiBzdHJpbmcsIGJ1Y2tldE5hbWU6IHN0cmluZykge1xuICB0cnkge1xuICAgIGNvbnN0IHMzQ2xpZW50ID0gYXdhaXQgZ2V0QXV0aGVudGljYXRlZFMzQ2xpZW50KCk7XG4gICAgY29uc3QgY29tbWFuZCA9IG5ldyBMaXN0T2JqZWN0c1YyQ29tbWFuZCh7XG4gICAgICBCdWNrZXQ6IGJ1Y2tldE5hbWUsXG4gICAgICBQcmVmaXg6IHByZWZpeCxcbiAgICB9KTtcbiAgICBcbiAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IHMzQ2xpZW50LnNlbmQoY29tbWFuZCk7XG4gICAgcmV0dXJuIHJlc3BvbnNlLkNvbnRlbnRzIHx8IFtdO1xuICB9IGNhdGNoIChlcnJvcikge1xuICAgIGNvbnNvbGUuZXJyb3IoJ0Vycm9yIGxpc3RpbmcgZmlsZXM6JywgZXJyb3IpO1xuICAgIHRocm93IGVycm9yO1xuICB9XG59XG5cbi8vIERlbGV0ZSBhIGZpbGVcbmV4cG9ydCBhc3luYyBmdW5jdGlvbiBkZWxldGVGaWxlKGtleTogc3RyaW5nLCBidWNrZXROYW1lOiBzdHJpbmcpIHtcbiAgdHJ5IHtcbiAgICBjb25zdCBzM0NsaWVudCA9IGF3YWl0IGdldEF1dGhlbnRpY2F0ZWRTM0NsaWVudCgpO1xuICAgIGNvbnN0IGNvbW1hbmQgPSBuZXcgRGVsZXRlT2JqZWN0Q29tbWFuZCh7XG4gICAgICBCdWNrZXQ6IGJ1Y2tldE5hbWUsXG4gICAgICBLZXk6IGtleSxcbiAgICB9KTtcbiAgICBcbiAgICBhd2FpdCBzM0NsaWVudC5zZW5kKGNvbW1hbmQpO1xuICAgIHJldHVybiB0cnVlO1xuICB9IGNhdGNoIChlcnJvcikge1xuICAgIGNvbnNvbGUuZXJyb3IoJ0Vycm9yIGRlbGV0aW5nIGZpbGU6JywgZXJyb3IpO1xuICAgIHRocm93IGVycm9yO1xuICB9XG59Il19

@@ -12,158 +12,166 @@ const client_cognito_identity_provider_1 = require("@aws-sdk/client-cognito-iden
 const client_cognito_identity_1 = require("@aws-sdk/client-cognito-identity");
 // Singleton class to manage Cognito authentication
 class CognitoAuth {
-    constructor() {
-        this.config = null;
-        this.currentSession = null;
-        this.cognitoClient = null;
-        this.identityClient = null;
+  constructor() {
+    this.config = null;
+    this.currentSession = null;
+    this.cognitoClient = null;
+    this.identityClient = null;
+  }
+  static getInstance() {
+    if (!CognitoAuth.instance) {
+      CognitoAuth.instance = new CognitoAuth();
     }
-    static getInstance() {
-        if (!CognitoAuth.instance) {
-            CognitoAuth.instance = new CognitoAuth();
-        }
-        return CognitoAuth.instance;
+    return CognitoAuth.instance;
+  }
+  configure(config) {
+    this.config = config;
+    this.cognitoClient =
+      new client_cognito_identity_provider_1.CognitoIdentityProviderClient({
+        region: config.region,
+      });
+    this.identityClient = new client_cognito_identity_1.CognitoIdentityClient({
+      region: config.region,
+    });
+  }
+  async signIn(username, password) {
+    if (!this.config || !this.cognitoClient) {
+      throw new Error("Cognito is not configured");
     }
-    configure(config) {
-        this.config = config;
-        this.cognitoClient = new client_cognito_identity_provider_1.CognitoIdentityProviderClient({ region: config.region });
-        this.identityClient = new client_cognito_identity_1.CognitoIdentityClient({ region: config.region });
+    try {
+      const command =
+        new client_cognito_identity_provider_1.InitiateAuthCommand({
+          AuthFlow: "USER_PASSWORD_AUTH",
+          ClientId: this.config.userPoolWebClientId,
+          AuthParameters: {
+            USERNAME: username,
+            PASSWORD: password,
+          },
+        });
+      const response = await this.cognitoClient.send(command);
+      if (!response.AuthenticationResult) {
+        throw new Error("Authentication failed");
+      }
+      const session = {
+        idToken: response.AuthenticationResult.IdToken || "",
+        accessToken: response.AuthenticationResult.AccessToken || "",
+      };
+      this.currentSession = session;
+      return {
+        idToken: response.AuthenticationResult.IdToken || "",
+        accessToken: response.AuthenticationResult.AccessToken || "",
+        refreshToken: response.AuthenticationResult.RefreshToken || "",
+        expiresIn: response.AuthenticationResult.ExpiresIn || 3600,
+      };
+    } catch (error) {
+      console.error("Error signing in:", error);
+      throw error;
     }
-    async signIn(username, password) {
-        if (!this.config || !this.cognitoClient) {
-            throw new Error('Cognito is not configured');
-        }
-        try {
-            const command = new client_cognito_identity_provider_1.InitiateAuthCommand({
-                AuthFlow: 'USER_PASSWORD_AUTH',
-                ClientId: this.config.userPoolWebClientId,
-                AuthParameters: {
-                    USERNAME: username,
-                    PASSWORD: password,
-                },
-            });
-            const response = await this.cognitoClient.send(command);
-            if (!response.AuthenticationResult) {
-                throw new Error('Authentication failed');
-            }
-            const session = {
-                idToken: response.AuthenticationResult.IdToken || '',
-                accessToken: response.AuthenticationResult.AccessToken || '',
-            };
-            this.currentSession = session;
-            return {
-                idToken: response.AuthenticationResult.IdToken || '',
-                accessToken: response.AuthenticationResult.AccessToken || '',
-                refreshToken: response.AuthenticationResult.RefreshToken || '',
-                expiresIn: response.AuthenticationResult.ExpiresIn || 3600,
-            };
-        }
-        catch (error) {
-            console.error('Error signing in:', error);
-            throw error;
-        }
+  }
+  async signOut() {
+    if (!this.config || !this.cognitoClient || !this.currentSession) {
+      return;
     }
-    async signOut() {
-        if (!this.config || !this.cognitoClient || !this.currentSession) {
-            return;
-        }
-        try {
-            const command = new client_cognito_identity_provider_1.GlobalSignOutCommand({
-                AccessToken: this.currentSession.accessToken,
-            });
-            await this.cognitoClient.send(command);
-            this.currentSession = null;
-        }
-        catch (error) {
-            console.error('Error signing out:', error);
-            throw error;
-        }
+    try {
+      const command =
+        new client_cognito_identity_provider_1.GlobalSignOutCommand({
+          AccessToken: this.currentSession.accessToken,
+        });
+      await this.cognitoClient.send(command);
+      this.currentSession = null;
+    } catch (error) {
+      console.error("Error signing out:", error);
+      throw error;
     }
-    async getCurrentSession() {
-        if (!this.currentSession) {
-            return null;
-        }
-        try {
-            // Validate the access token is still valid
-            const command = new client_cognito_identity_provider_1.GetUserCommand({
-                AccessToken: this.currentSession.accessToken,
-            });
-            await this.cognitoClient?.send(command);
-            return this.currentSession;
-        }
-        catch (error) {
-            console.error('Session expired or invalid');
-            this.currentSession = null;
-            return null;
-        }
+  }
+  async getCurrentSession() {
+    if (!this.currentSession) {
+      return null;
     }
-    async getCredentials() {
-        if (!this.config || !this.identityClient || !this.currentSession) {
-            return null;
-        }
-        try {
-            // Get identity ID
-            const getIdCommand = new client_cognito_identity_1.GetIdCommand({
-                IdentityPoolId: this.config.identityPoolId,
-                Logins: {
-                    [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]: this.currentSession.idToken,
-                },
-            });
-            const { IdentityId } = await this.identityClient.send(getIdCommand);
-            if (!IdentityId) {
-                throw new Error('Failed to get identity ID');
-            }
-            // Get AWS credentials
-            const getCredentialsCommand = new client_cognito_identity_1.GetCredentialsForIdentityCommand({
-                IdentityId,
-                Logins: {
-                    [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]: this.currentSession.idToken,
-                },
-            });
-            const credentialsResponse = await this.identityClient.send(getCredentialsCommand);
-            if (!credentialsResponse.Credentials) {
-                throw new Error('Failed to get credentials');
-            }
-            // Update session with credentials
-            this.currentSession = {
-                ...this.currentSession,
-                credentials: {
-                    accessKeyId: credentialsResponse.Credentials.AccessKeyId || '',
-                    secretAccessKey: credentialsResponse.Credentials.SecretKey || '',
-                    sessionToken: credentialsResponse.Credentials.SessionToken || '',
-                    expiration: credentialsResponse.Credentials.Expiration || new Date(),
-                },
-            };
-            return this.currentSession;
-        }
-        catch (error) {
-            console.error('Error getting credentials:', error);
-            return null;
-        }
+    try {
+      // Validate the access token is still valid
+      const command = new client_cognito_identity_provider_1.GetUserCommand({
+        AccessToken: this.currentSession.accessToken,
+      });
+      await this.cognitoClient?.send(command);
+      return this.currentSession;
+    } catch (error) {
+      console.error("Session expired or invalid");
+      this.currentSession = null;
+      return null;
     }
-    async getIdToken() {
-        const session = await this.getCurrentSession();
-        return session ? session.idToken : null;
+  }
+  async getCredentials() {
+    if (!this.config || !this.identityClient || !this.currentSession) {
+      return null;
     }
+    try {
+      // Get identity ID
+      const getIdCommand = new client_cognito_identity_1.GetIdCommand({
+        IdentityPoolId: this.config.identityPoolId,
+        Logins: {
+          [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]:
+            this.currentSession.idToken,
+        },
+      });
+      const { IdentityId } = await this.identityClient.send(getIdCommand);
+      if (!IdentityId) {
+        throw new Error("Failed to get identity ID");
+      }
+      // Get AWS credentials
+      const getCredentialsCommand =
+        new client_cognito_identity_1.GetCredentialsForIdentityCommand({
+          IdentityId,
+          Logins: {
+            [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]:
+              this.currentSession.idToken,
+          },
+        });
+      const credentialsResponse = await this.identityClient.send(
+        getCredentialsCommand,
+      );
+      if (!credentialsResponse.Credentials) {
+        throw new Error("Failed to get credentials");
+      }
+      // Update session with credentials
+      this.currentSession = {
+        ...this.currentSession,
+        credentials: {
+          accessKeyId: credentialsResponse.Credentials.AccessKeyId || "",
+          secretAccessKey: credentialsResponse.Credentials.SecretKey || "",
+          sessionToken: credentialsResponse.Credentials.SessionToken || "",
+          expiration: credentialsResponse.Credentials.Expiration || new Date(),
+        },
+      };
+      return this.currentSession;
+    } catch (error) {
+      console.error("Error getting credentials:", error);
+      return null;
+    }
+  }
+  async getIdToken() {
+    const session = await this.getCurrentSession();
+    return session ? session.idToken : null;
+  }
 }
 exports.CognitoAuth = CognitoAuth;
 // Helper functions for simpler API
 function configureCognito(config) {
-    CognitoAuth.getInstance().configure(config);
+  CognitoAuth.getInstance().configure(config);
 }
 async function login(username, password) {
-    return CognitoAuth.getInstance().signIn(username, password);
+  return CognitoAuth.getInstance().signIn(username, password);
 }
 async function logout() {
-    return CognitoAuth.getInstance().signOut();
+  return CognitoAuth.getInstance().signOut();
 }
 async function getCurrentSession() {
-    return CognitoAuth.getInstance().getCurrentSession();
+  return CognitoAuth.getInstance().getCurrentSession();
 }
 async function getCurrentCredentials() {
-    return CognitoAuth.getInstance().getCredentials();
+  return CognitoAuth.getInstance().getCredentials();
 }
 async function getIdToken() {
-    return CognitoAuth.getInstance().getIdToken();
+  return CognitoAuth.getInstance().getIdToken();
 }
 //# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY29nbml0by1jbGllbnQuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyJjb2duaXRvLWNsaWVudC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiO0FBQUEsZ0RBQWdEOzs7QUEyTWhELDRDQUVDO0FBRUQsc0JBRUM7QUFFRCx3QkFFQztBQUVELDhDQUVDO0FBRUQsc0RBRUM7QUFFRCxnQ0FFQztBQS9ORCxnR0FLbUQ7QUFDbkQsOEVBSTBDO0FBOEIxQyxtREFBbUQ7QUFDbkQsTUFBYSxXQUFXO0lBUXRCO1FBTlEsV0FBTSxHQUF5QixJQUFJLENBQUM7UUFDcEMsbUJBQWMsR0FBbUIsSUFBSSxDQUFDO1FBRXRDLGtCQUFhLEdBQXlDLElBQUksQ0FBQztRQUMzRCxtQkFBYyxHQUFpQyxJQUFJLENBQUM7SUFFckMsQ0FBQztJQUVqQixNQUFNLENBQUMsV0FBVztRQUN2QixJQUFJLENBQUMsV0FBVyxDQUFDLFFBQVEsRUFBRSxDQUFDO1lBQzFCLFdBQVcsQ0FBQyxRQUFRLEdBQUcsSUFBSSxXQUFXLEVBQUUsQ0FBQztRQUMzQyxDQUFDO1FBQ0QsT0FBTyxXQUFXLENBQUMsUUFBUSxDQUFDO0lBQzlCLENBQUM7SUFFTSxTQUFTLENBQUMsTUFBcUI7UUFDcEMsSUFBSSxDQUFDLE1BQU0sR0FBRyxNQUFNLENBQUM7UUFDckIsSUFBSSxDQUFDLGFBQWEsR0FBRyxJQUFJLGdFQUE2QixDQUFDLEVBQUUsTUFBTSxFQUFFLE1BQU0sQ0FBQyxNQUFNLEVBQUUsQ0FBQyxDQUFDO1FBQ2xGLElBQUksQ0FBQyxjQUFjLEdBQUcsSUFBSSwrQ0FBcUIsQ0FBQyxFQUFFLE1BQU0sRUFBRSxNQUFNLENBQUMsTUFBTSxFQUFFLENBQUMsQ0FBQztJQUM3RSxDQUFDO0lBRU0sS0FBSyxDQUFDLE1BQU0sQ0FBQyxRQUFnQixFQUFFLFFBQWdCO1FBQ3BELElBQUksQ0FBQyxJQUFJLENBQUMsTUFBTSxJQUFJLENBQUMsSUFBSSxDQUFDLGFBQWEsRUFBRSxDQUFDO1lBQ3hDLE1BQU0s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QUFVLEtBQUssQ0FBQyxRQUFnQixFQUFFLFFBQWdCO0lBQzVELE9BQU8sV0FBVyxDQUFDLFdBQVcsRUFBRSxDQUFDLE1BQU0sQ0FBQyxRQUFRLEVBQUUsUUFBUSxDQUFDLENBQUM7QUFDOUQsQ0FBQztBQUVNLEtBQUssVUFBVSxNQUFNO0lBQzFCLE9BQU8sV0FBVyxDQUFDLFdBQVcsRUFBRSxDQUFDLE9BQU8sRUFBRSxDQUFDO0FBQzdDLENBQUM7QUFFTSxLQUFLLFVBQVUsaUJBQWlCO0lBQ3JDLE9BQU8sV0FBVyxDQUFDLFdBQVcsRUFBRSxDQUFDLGlCQUFpQixFQUFFLENBQUM7QUFDdkQsQ0FBQztBQUVNLEtBQUssVUFBVSxxQkFBcUI7SUFDekMsT0FBTyxXQUFXLENBQUMsV0FBVyxFQUFFLENBQUMsY0FBYyxFQUFFLENBQUM7QUFDcEQsQ0FBQztBQUVNLEtBQUssVUFBVSxVQUFVO0lBQzlCLE9BQU8sV0FBVyxDQUFDLFdBQVcsRUFBRSxDQUFDLFVBQVUsRUFBRSxDQUFDO0FBQ2hELENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyIvLyBEaXJlY3QgQ29nbml0byBjbGllbnQgdG8gcmVwbGFjZSBBbXBsaWZ5IEF1dGhcblxuaW1wb3J0IHsgXG4gIENvZ25pdG9JZGVudGl0eVByb3ZpZGVyQ2xpZW50LCBcbiAgSW5pdGlhdGVBdXRoQ29tbWFuZCxcbiAgR2xvYmFsU2lnbk91dENvbW1hbmQsXG4gIEdldFVzZXJDb21tYW5kXG59IGZyb20gXCJAYXdzLXNkay9jbGllbnQtY29nbml0by1pZGVudGl0eS1wcm92aWRlclwiO1xuaW1wb3J0IHsgXG4gIENvZ25pdG9JZGVudGl0eUNsaWVudCwgXG4gIEdldElkQ29tbWFuZCwgXG4gIEdldENyZWRlbnRpYWxzRm9ySWRlbnRpdHlDb21tYW5kIFxufSBmcm9tIFwiQGF3cy1zZGsvY2xpZW50LWNvZ25pdG8taWRlbnRpdHlcIjtcblxuLy8gQ29uZmlndXJhdGlvbiBpbnRlcmZhY2VcbmV4cG9ydCBpbnRlcmZhY2UgQ29nbml0b0NvbmZpZyB7XG4gIHVzZXJQb29sSWQ6IHN0cmluZztcbiAgdXNlclBvb2xXZWJDbGllbnRJZDogc3RyaW5nO1xuICBpZGVudGl0eVBvb2xJZDogc3RyaW5nO1xuICByZWdpb246IHN0cmluZztcbn1cblxuLy8gQXV0aCByZXN1bHQgaW50ZXJmYWNlXG5leHBvcnQgaW50ZXJmYWNlIEF1dGhSZXN1bHQge1xuICBpZFRva2VuOiBzdHJpbmc7XG4gIGFjY2Vzc1Rva2VuOiBzdHJpbmc7XG4gIHJlZnJlc2hUb2tlbjogc3RyaW5nO1xuICBleHBpcmVzSW46IG51bWJlcjtcbn1cblxuLy8gU2Vzc2lvbiBpbnRlcmZhY2VcbmV4cG9ydCBpbnRlcmZhY2UgU2Vzc2lvbiB7XG4gIGlkVG9rZW46IHN0cmluZztcbiAgYWNjZXNzVG9rZW46IHN0cmluZztcbiAgY3JlZGVudGlhbHM/OiB7XG4gICAgYWNjZXNzS2V5SWQ6IHN0cmluZztcbiAgICBzZWNyZXRBY2Nlc3NLZXk6IHN0cmluZztcbiAgICBzZXNzaW9uVG9rZW46IHN0cmluZztcbiAgICBleHBpcmF0aW9uOiBEYXRlO1xuICB9O1xufVxuXG4vLyBTaW5nbGV0b24gY2xhc3MgdG8gbWFuYWdlIENvZ25pdG8gYXV0aGVudGljYXRpb25cbmV4cG9ydCBjbGFzcyBDb2duaXRvQXV0aCB7XG4gIHByaXZhdGUgc3RhdGljIGluc3RhbmNlOiBDb2duaXRvQXV0aDtcbiAgcHJpdmF0ZSBjb25maWc6IENvZ25pdG9Db25maWcgfCBudWxsID0gbnVsbDtcbiAgcHJpdmF0ZSBjdXJyZW50U2Vzc2lvbjogU2Vzc2lvbiB8IG51bGwgPSBudWxsO1xuICBcbiAgcHJpdmF0ZSBjb2duaXRvQ2xpZW50OiBDb2duaXRvSWRlbnRpdHlQcm92aWRlckNsaWVudCB8IG51bGwgPSBudWxsO1xuICBwcml2YXRlIGlkZW50aXR5Q2xpZW50OiBDb2duaXRvSWRlbnRpdHlDbGllbnQgfCBudWxsID0gbnVsbDtcblxuICBwcml2YXRlIGNvbnN0cnVjdG9yKCkge31cblxuICBwdWJsaWMgc3RhdGljIGdldEluc3RhbmNlKCk6IENvZ25pdG9BdXRoIHtcbiAgICBpZiAoIUNvZ25pdG9BdXRoLmluc3RhbmNlKSB7XG4gICAgICBDb2duaXRvQXV0aC5pbnN0YW5jZSA9IG5ldyBDb2duaXRvQXV0aCgpO1xuICAgIH1cbiAgICByZXR1cm4gQ29nbml0b0F1dGguaW5zdGFuY2U7XG4gIH1cblxuICBwdWJsaWMgY29uZmlndXJlKGNvbmZpZzogQ29nbml0b0NvbmZpZyk6IHZvaWQge1xuICAgIHRoaXMuY29uZmlnID0gY29uZmlnO1xuICAgIHRoaXMuY29nbml0b0NsaWVudCA9IG5ldyBDb2duaXRvSWRlbnRpdHlQcm92aWRlckNsaWVudCh7IHJlZ2lvbjogY29uZmlnLnJlZ2lvbiB9KTtcbiAgICB0aGlzLmlkZW50aXR5Q2xpZW50ID0gbmV3IENvZ25pdG9JZGVudGl0eUNsaWVudCh7IHJlZ2lvbjogY29uZmlnLnJlZ2lvbiB9KTtcbiAgfVxuXG4gIHB1YmxpYyBhc3luYyBzaWduSW4odXNlcm5hbWU6IHN0cmluZywgcGFzc3dvcmQ6IHN0cmluZyk6IFByb21pc2U8QXV0aFJlc3VsdD4ge1xuICAgIGlmICghdGhpcy5jb25maWcgfHwgIXRoaXMuY29nbml0b0NsaWVudCkge1xuICAgICAgdGhyb3cgbmV3IEVycm9yKCdDb2duaXRvIGlzIG5vdCBjb25maWd1cmVkJyk7XG4gICAgfVxuXG4gICAgdHJ5IHtcbiAgICAgIGNvbnN0IGNvbW1hbmQgPSBuZXcgSW5pdGlhdGVBdXRoQ29tbWFuZCh7XG4gICAgICAgIEF1dGhGbG93OiAnVVNFUl9QQVNTV09SRF9BVVRIJyxcbiAgICAgICAgQ2xpZW50SWQ6IHRoaXMuY29uZmlnLnVzZXJQb29sV2ViQ2xpZW50SWQsXG4gICAgICAgIEF1dGhQYXJhbWV0ZXJzOiB7XG4gICAgICAgICAgVVNFUk5BTUU6IHVzZXJuYW1lLFxuICAgICAgICAgIFBBU1NXT1JEOiBwYXNzd29yZCxcbiAgICAgICAgfSxcbiAgICAgIH0pO1xuXG4gICAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IHRoaXMuY29nbml0b0NsaWVudC5zZW5kKGNvbW1hbmQpO1xuICAgICAgXG4gICAgICBpZiAoIXJlc3BvbnNlLkF1dGhlbnRpY2F0aW9uUmVzdWx0KSB7XG4gICAgICAgIHRocm93IG5ldyBFcnJvcignQXV0aGVudGljYXRpb24gZmFpbGVkJyk7XG4gICAgICB9XG5cbiAgICAgIGNvbnN0IHNlc3Npb246IFNlc3Npb24gPSB7XG4gICAgICAgIGlkVG9rZW46IHJlc3BvbnNlLkF1dGhlbnRpY2F0aW9uUmVzdWx0LklkVG9rZW4gfHwgJycsXG4gICAgICAgIGFjY2Vzc1Rva2VuOiByZXNwb25zZS5BdXRoZW50aWNhdGlvblJlc3VsdC5BY2Nlc3NUb2tlbiB8fCAnJyxcbiAgICAgIH07XG5cbiAgICAgIHRoaXMuY3VycmVudFNlc3Npb24gPSBzZXNzaW9uO1xuXG4gICAgICByZXR1cm4ge1xuICAgICAgICBpZFRva2VuOiByZXNwb25zZS5BdXRoZW50aWNhdGlvblJlc3VsdC5JZFRva2VuIHx8ICcnLFxuICAgICAgICBhY2Nlc3NUb2tlbjogcmVzcG9uc2UuQXV0aGVudGljYXRpb25SZXN1bHQuQWNjZXNzVG9rZW4gfHwgJycsXG4gICAgICAgIHJlZnJlc2hUb2tlbjogcmVzcG9uc2UuQXV0aGVudGljYXRpb25SZXN1bHQuUmVmcmVzaFRva2VuIHx8ICcnLFxuICAgICAgICBleHBpcmVzSW46IHJlc3BvbnNlLkF1dGhlbnRpY2F0aW9uUmVzdWx0LkV4cGlyZXNJbiB8fCAzNjAwLFxuICAgICAgfTtcbiAgICB9IGNhdGNoIChlcnJvcikge1xuICAgICAgY29uc29sZS5lcnJvcignRXJyb3Igc2lnbmluZyBpbjonLCBlcnJvcik7XG4gICAgICB0aHJvdyBlcnJvcjtcbiAgICB9XG4gIH1cblxuICBwdWJsaWMgYXN5bmMgc2lnbk91dCgpOiBQcm9taXNlPHZvaWQ+IHtcbiAgICBpZiAoIXRoaXMuY29uZmlnIHx8ICF0aGlzLmNvZ25pdG9DbGllbnQgfHwgIXRoaXMuY3VycmVudFNlc3Npb24pIHtcbiAgICAgIHJldHVybjtcbiAgICB9XG5cbiAgICB0cnkge1xuICAgICAgY29uc3QgY29tbWFuZCA9IG5ldyBHbG9iYWxTaWduT3V0Q29tbWFuZCh7XG4gICAgICAgIEFjY2Vzc1Rva2VuOiB0aGlzLmN1cnJlbnRTZXNzaW9uLmFjY2Vzc1Rva2VuLFxuICAgICAgfSk7XG5cbiAgICAgIGF3YWl0IHRoaXMuY29nbml0b0NsaWVudC5zZW5kKGNvbW1hbmQpO1xuICAgICAgdGhpcy5jdXJyZW50U2Vzc2lvbiA9IG51bGw7XG4gICAgfSBjYXRjaCAoZXJyb3IpIHtcbiAgICAgIGNvbnNvbGUuZXJyb3IoJ0Vycm9yIHNpZ25pbmcgb3V0OicsIGVycm9yKTtcbiAgICAgIHRocm93IGVycm9yO1xuICAgIH1cbiAgfVxuXG4gIHB1YmxpYyBhc3luYyBnZXRDdXJyZW50U2Vzc2lvbigpOiBQcm9taXNlPFNlc3Npb24gfCBudWxsPiB7XG4gICAgaWYgKCF0aGlzLmN1cnJlbnRTZXNzaW9uKSB7XG4gICAgICByZXR1cm4gbnVsbDtcbiAgICB9XG5cbiAgICB0cnkge1xuICAgICAgLy8gVmFsaWRhdGUgdGhlIGFjY2VzcyB0b2tlbiBpcyBzdGlsbCB2YWxpZFxuICAgICAgY29uc3QgY29tbWFuZCA9IG5ldyBHZXRVc2VyQ29tbWFuZCh7XG4gICAgICAgIEFjY2Vzc1Rva2VuOiB0aGlzLmN1cnJlbnRTZXNzaW9uLmFjY2Vzc1Rva2VuLFxuICAgICAgfSk7XG5cbiAgICAgIGF3YWl0IHRoaXMuY29nbml0b0NsaWVudD8uc2VuZChjb21tYW5kKTtcbiAgICAgIHJldHVybiB0aGlzLmN1cnJlbnRTZXNzaW9uO1xuICAgIH0gY2F0Y2ggKGVycm9yKSB7XG4gICAgICBjb25zb2xlLmVycm9yKCdTZXNzaW9uIGV4cGlyZWQgb3IgaW52YWxpZCcpO1xuICAgICAgdGhpcy5jdXJyZW50U2Vzc2lvbiA9IG51bGw7XG4gICAgICByZXR1cm4gbnVsbDtcbiAgICB9XG4gIH1cblxuICBwdWJsaWMgYXN5bmMgZ2V0Q3JlZGVudGlhbHMoKTogUHJvbWlzZTxTZXNzaW9uIHwgbnVsbD4ge1xuICAgIGlmICghdGhpcy5jb25maWcgfHwgIXRoaXMuaWRlbnRpdHlDbGllbnQgfHwgIXRoaXMuY3VycmVudFNlc3Npb24pIHtcbiAgICAgIHJldHVybiBudWxsO1xuICAgIH1cblxuICAgIHRyeSB7XG4gICAgICAvLyBHZXQgaWRlbnRpdHkgSURcbiAgICAgIGNvbnN0IGdldElkQ29tbWFuZCA9IG5ldyBHZXRJZENvbW1hbmQoe1xuICAgICAgICBJZGVudGl0eVBvb2xJZDogdGhpcy5jb25maWcuaWRlbnRpdHlQb29sSWQsXG4gICAgICAgIExvZ2luczoge1xuICAgICAgICAgIFtgY29nbml0by1pZHAuJHt0aGlzLmNvbmZpZy5yZWdpb259LmFtYXpvbmF3cy5jb20vJHt0aGlzLmNvbmZpZy51c2VyUG9vbElkfWBdOiB0aGlzLmN1cnJlbnRTZXNzaW9uLmlkVG9rZW4sXG4gICAgICAgIH0sXG4gICAgICB9KTtcbiAgICAgIFxuICAgICAgY29uc3QgeyBJZGVudGl0eUlkIH0gPSBhd2FpdCB0aGlzLmlkZW50aXR5Q2xpZW50LnNlbmQoZ2V0SWRDb21tYW5kKTtcbiAgICAgIFxuICAgICAgaWYgKCFJZGVudGl0eUlkKSB7XG4gICAgICAgIHRocm93IG5ldyBFcnJvcignRmFpbGVkIHRvIGdldCBpZGVudGl0eSBJRCcpO1xuICAgICAgfVxuXG4gICAgICAvLyBHZXQgQVdTIGNyZWRlbnRpYWxzXG4gICAgICBjb25zdCBnZXRDcmVkZW50aWFsc0NvbW1hbmQgPSBuZXcgR2V0Q3JlZGVudGlhbHNGb3JJZGVudGl0eUNvbW1hbmQoe1xuICAgICAgICBJZGVudGl0eUlkLFxuICAgICAgICBMb2dpbnM6IHtcbiAgICAgICAgICBbYGNvZ25pdG8taWRwLiR7dGhpcy5jb25maWcucmVnaW9ufS5hbWF6b25hd3MuY29tLyR7dGhpcy5jb25maWcudXNlclBvb2xJZH1gXTogdGhpcy5jdXJyZW50U2Vzc2lvbi5pZFRva2VuLFxuICAgICAgICB9LFxuICAgICAgfSk7XG4gICAgICBcbiAgICAgIGNvbnN0IGNyZWRlbnRpYWxzUmVzcG9uc2UgPSBhd2FpdCB0aGlzLmlkZW50aXR5Q2xpZW50LnNlbmQoZ2V0Q3JlZGVudGlhbHNDb21tYW5kKTtcbiAgICAgIFxuICAgICAgaWYgKCFjcmVkZW50aWFsc1Jlc3BvbnNlLkNyZWRlbnRpYWxzKSB7XG4gICAgICAgIHRocm93IG5ldyBFcnJvcignRmFpbGVkIHRvIGdldCBjcmVkZW50aWFscycpO1xuICAgICAgfVxuXG4gICAgICAvLyBVcGRhdGUgc2Vzc2lvbiB3aXRoIGNyZWRlbnRpYWxzXG4gICAgICB0aGlzLmN1cnJlbnRTZXNzaW9uID0ge1xuICAgICAgICAuLi50aGlzLmN1cnJlbnRTZXNzaW9uLFxuICAgICAgICBjcmVkZW50aWFsczoge1xuICAgICAgICAgIGFjY2Vzc0tleUlkOiBjcmVkZW50aWFsc1Jlc3BvbnNlLkNyZWRlbnRpYWxzLkFjY2Vzc0tleUlkIHx8ICcnLFxuICAgICAgICAgIHNlY3JldEFjY2Vzc0tleTogY3JlZGVudGlhbHNSZXNwb25zZS5DcmVkZW50aWFscy5TZWNyZXRLZXkgfHwgJycsXG4gICAgICAgICAgc2Vzc2lvblRva2VuOiBjcmVkZW50aWFsc1Jlc3BvbnNlLkNyZWRlbnRpYWxzLlNlc3Npb25Ub2tlbiB8fCAnJyxcbiAgICAgICAgICBleHBpcmF0aW9uOiBjcmVkZW50aWFsc1Jlc3BvbnNlLkNyZWRlbnRpYWxzLkV4cGlyYXRpb24gfHwgbmV3IERhdGUoKSxcbiAgICAgICAgfSxcbiAgICAgIH07XG5cbiAgICAgIHJldHVybiB0aGlzLmN1cnJlbnRTZXNzaW9uO1xuICAgIH0gY2F0Y2ggKGVycm9yKSB7XG4gICAgICBjb25zb2xlLmVycm9yKCdFcnJvciBnZXR0aW5nIGNyZWRlbnRpYWxzOicsIGVycm9yKTtcbiAgICAgIHJldHVybiBudWxsO1xuICAgIH1cbiAgfVxuXG4gIHB1YmxpYyBhc3luYyBnZXRJZFRva2VuKCk6IFByb21pc2U8c3RyaW5nIHwgbnVsbD4ge1xuICAgIGNvbnN0IHNlc3Npb24gPSBhd2FpdCB0aGlzLmdldEN1cnJlbnRTZXNzaW9uKCk7XG4gICAgcmV0dXJuIHNlc3Npb24gPyBzZXNzaW9uLmlkVG9rZW4gOiBudWxsO1xuICB9XG59XG5cbi8vIEhlbHBlciBmdW5jdGlvbnMgZm9yIHNpbXBsZXIgQVBJXG5leHBvcnQgZnVuY3Rpb24gY29uZmlndXJlQ29nbml0byhjb25maWc6IENvZ25pdG9Db25maWcpOiB2b2lkIHtcbiAgQ29nbml0b0F1dGguZ2V0SW5zdGFuY2UoKS5jb25maWd1cmUoY29uZmlnKTtcbn1cblxuZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIGxvZ2luKHVzZXJuYW1lOiBzdHJpbmcsIHBhc3N3b3JkOiBzdHJpbmcpOiBQcm9taXNlPEF1dGhSZXN1bHQ+IHtcbiAgcmV0dXJuIENvZ25pdG9BdXRoLmdldEluc3RhbmNlKCkuc2lnbkluKHVzZXJuYW1lLCBwYXNzd29yZCk7XG59XG5cbmV4cG9ydCBhc3luYyBmdW5jdGlvbiBsb2dvdXQoKTogUHJvbWlzZTx2b2lkPiB7XG4gIHJldHVybiBDb2duaXRvQXV0aC5nZXRJbnN0YW5jZSgpLnNpZ25PdXQoKTtcbn1cblxuZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIGdldEN1cnJlbnRTZXNzaW9uKCk6IFByb21pc2U8U2Vzc2lvbiB8IG51bGw+IHtcbiAgcmV0dXJuIENvZ25pdG9BdXRoLmdldEluc3RhbmNlKCkuZ2V0Q3VycmVudFNlc3Npb24oKTtcbn1cblxuZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIGdldEN1cnJlbnRDcmVkZW50aWFscygpOiBQcm9taXNlPFNlc3Npb24gfCBudWxsPiB7XG4gIHJldHVybiBDb2duaXRvQXV0aC5nZXRJbnN0YW5jZSgpLmdldENyZWRlbnRpYWxzKCk7XG59XG5cbmV4cG9ydCBhc3luYyBmdW5jdGlvbiBnZXRJZFRva2VuKCk6IFByb21pc2U8c3RyaW5nIHwgbnVsbD4ge1xuICByZXR1cm4gQ29nbml0b0F1dGguZ2V0SW5zdGFuY2UoKS5nZXRJZFRva2VuKCk7XG59Il19

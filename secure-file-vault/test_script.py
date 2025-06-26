@@ -37,9 +37,9 @@ resp = cognito_idp.admin_initiate_auth(
 # Handle NEW_PASSWORD_REQUIRED challenge if present
 if 'ChallengeName' in resp and resp['ChallengeName'] == 'NEW_PASSWORD_REQUIRED':
     print(f"User {USERNAME} requires password change. Responding to challenge...")
-    
+
     new_password = "NewPassword123!@#"  # Create a new permanent password
-    
+
     # Respond to the new password challenge
     resp = cognito_idp.admin_respond_to_auth_challenge(
         UserPoolId=USER_POOL_ID,

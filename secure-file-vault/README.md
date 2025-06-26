@@ -56,11 +56,13 @@ The system design is based on the principles of cloud security and uses AWS serv
 This project uses environment variables to securely manage sensitive configuration data. To set up your environment:
 
 1. Copy the `.env.example` file to create a new `.env` file:
+
    ```bash
    cp .env.example .env
    ```
 
 2. Edit the `.env` file with your actual configuration values:
+
    ```
    # AWS Deployment Environment Variables
    DEFAULT_EMAIL=your-notification-email@example.com
@@ -99,23 +101,28 @@ When you deploy the stack with CDK, the environment variables will be automatica
 This project includes a Python virtual environment for Lambda development:
 
 ### Activate the Python environment:
+
 ```bash
 source secure_vault/bin/activate
 ```
 
 ### Verify activation:
+
 ```bash
 which python
 python --version  # Should show Python 3.12.9
 ```
 
 ### Deactivate when done:
+
 ```bash
 deactivate
 ```
 
 ### Clean the environment:
+
 To remove all installed packages and reset the environment:
+
 ```bash
 # Deactivate first if active
 deactivate

@@ -5,6 +5,7 @@ This frontend application connects to AWS services using Cognito for authenticat
 ## Setup Instructions
 
 1. Make sure you have the latest configuration values from your AWS deployment:
+
    - User Pool ID
    - User Pool Web Client ID
    - Identity Pool ID
@@ -14,8 +15,9 @@ This frontend application connects to AWS services using Cognito for authenticat
 2. Update the configuration in one of these ways:
 
    **Option 1**: Edit `main.js` directly and update the `config` object.
-   
+
    **Option 2**: Use the utility script:
+
    ```bash
    node update-config.js userPoolId=your-pool-id userPoolWebClientId=your-client-id bucketName=your-bucket-name
    ```
@@ -45,10 +47,12 @@ For easier testing, this frontend includes a mechanism to use local user credent
 If you're having trouble accessing the S3 bucket even after login:
 
 1. Check IAM policy for the customer role in `cognito-construct.ts`:
+
    - The policy restricts access to: `customers/${cognito-identity.amazonaws.com:sub}/*`
    - The path prefix must match exactly, including the correct user ID
 
 2. Check the browser console for errors and pay attention to:
+
    - The exact S3 path being used in requests
    - The error messages from AWS
    - The user ID and role information

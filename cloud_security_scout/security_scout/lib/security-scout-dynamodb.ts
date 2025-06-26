@@ -15,14 +15,18 @@ export class SecurityScoutDynamoDBStack extends cdk.Stack {
       partitionKey: {
         name: securityScoutTableSchema.partitionKey.name,
         type: dynamodb.AttributeType[
-          securityScoutTableSchema.partitionKey.type
+          securityScoutTableSchema.partitionKey
+            .type as keyof typeof dynamodb.AttributeType
         ],
       },
 
       // Add sort key from schema
       sortKey: {
         name: securityScoutTableSchema.sortKey.name,
-        type: dynamodb.AttributeType[securityScoutTableSchema.sortKey.type],
+        type: dynamodb.AttributeType[
+          securityScoutTableSchema.sortKey
+            .type as keyof typeof dynamodb.AttributeType
+        ],
       },
 
       // Configure table name from schema
@@ -47,7 +51,9 @@ export class SecurityScoutDynamoDBStack extends cdk.Stack {
         indexName: gsi.indexName,
         partitionKey: {
           name: gsi.partitionKey.name,
-          type: dynamodb.AttributeType[gsi.partitionKey.type],
+          type: dynamodb.AttributeType[
+            gsi.partitionKey.type as keyof typeof dynamodb.AttributeType
+          ],
         },
         projectionType: dynamodb.ProjectionType.ALL,
       });

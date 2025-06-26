@@ -14,18 +14,18 @@ def lambda_handler(event, context):
     try:
         user_pool_id = event['userPoolId']
         username = event['userName']
-        
+
         # Add user to customers group by default
         response = cognito_client.admin_add_user_to_group(
             UserPoolId=user_pool_id,
             Username=username,
             GroupName='customers'
         )
-        
+
         logger.info(f"Successfully added user {username} to customers group")
-        
+
     except Exception as e:
         logger.error(f"Error adding user {username} to group: {str(e)}")
         # Don't raise the exception to avoid blocking user confirmation
-    
+
     return event

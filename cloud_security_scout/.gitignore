@@ -48,3 +48,8 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
+# Gemini CLI
+gemini-cli/bundle/
+gemini-cli/packages/*/dist/
+gemini-cli/packages/*/coverage/
+gemini-cli/coverage/

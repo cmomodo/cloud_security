@@ -1,15 +1,15 @@
 // Direct Cognito client to replace Amplify Auth
 
-import { 
-  CognitoIdentityProviderClient, 
+import {
+  CognitoIdentityProviderClient,
   InitiateAuthCommand,
   GlobalSignOutCommand,
-  GetUserCommand
+  GetUserCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { 
-  CognitoIdentityClient, 
-  GetIdCommand, 
-  GetCredentialsForIdentityCommand 
+import {
+  CognitoIdentityClient,
+  GetIdCommand,
+  GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
 
 // Configuration interface
@@ -45,7 +45,7 @@ export class CognitoAuth {
   private static instance: CognitoAuth;
   private config: CognitoConfig | null = null;
   private currentSession: Session | null = null;
-  
+
   private cognitoClient: CognitoIdentityProviderClient | null = null;
   private identityClient: CognitoIdentityClient | null = null;
 
@@ -60,18 +60,20 @@ export class CognitoAuth {
 
   public configure(config: CognitoConfig): void {
     this.config = config;
-    this.cognitoClient = new CognitoIdentityProviderClient({ region: config.region });
+    this.cognitoClient = new CognitoIdentityProviderClient({
+      region: config.region,
+    });
     this.identityClient = new CognitoIdentityClient({ region: config.region });
   }
 
   public async signIn(username: string, password: string): Promise<AuthResult> {
     if (!this.config || !this.cognitoClient) {
-      throw new Error('Cognito is not configured');
+      throw new Error("Cognito is not configured");
     }
 
     try {
       const command = new InitiateAuthCommand({
-        AuthFlow: 'USER_PASSWORD_AUTH',
+        AuthFlow: "USER_PASSWORD_AUTH",
         ClientId: this.config.userPoolWebClientId,
         AuthParameters: {
           USERNAME: username,
@@ -80,26 +82,26 @@ export class CognitoAuth {
       });
 
       const response = await this.cognitoClient.send(command);
-      
+
       if (!response.AuthenticationResult) {
-        throw new Error('Authentication failed');
+        throw new Error("Authentication failed");
       }
 
       const session: Session = {
-        idToken: response.AuthenticationResult.IdToken || '',
-        accessToken: response.AuthenticationResult.AccessToken || '',
+        idToken: response.AuthenticationResult.IdToken || "",
+        accessToken: response.AuthenticationResult.AccessToken || "",
       };
 
       this.currentSession = session;
 
       return {
-        idToken: response.AuthenticationResult.IdToken || '',
-        accessToken: response.AuthenticationResult.AccessToken || '',
-        refreshToken: response.AuthenticationResult.RefreshToken || '',
+        idToken: response.AuthenticationResult.IdToken || "",
+        accessToken: response.AuthenticationResult.AccessToken || "",
+        refreshToken: response.AuthenticationResult.RefreshToken || "",
         expiresIn: response.AuthenticationResult.ExpiresIn || 3600,
       };
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error("Error signing in:", error);
       throw error;
     }
   }
@@ -117,7 +119,7 @@ export class CognitoAuth {
       await this.cognitoClient.send(command);
       this.currentSession = null;
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       throw error;
     }
   }
@@ -136,7 +138,7 @@ export class CognitoAuth {
       await this.cognitoClient?.send(command);
       return this.currentSession;
     } catch (error) {
-      console.error('Session expired or invalid');
+      console.error("Session expired or invalid");
       this.currentSession = null;
       return null;
     }
@@ -152,44 +154,48 @@ export class CognitoAuth {
       const getIdCommand = new GetIdCommand({
         IdentityPoolId: this.config.identityPoolId,
         Logins: {
-          [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]: this.currentSession.idToken,
+          [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]:
+            this.currentSession.idToken,
         },
       });
-      
+
       const { IdentityId } = await this.identityClient.send(getIdCommand);
-      
+
       if (!IdentityId) {
-        throw new Error('Failed to get identity ID');
+        throw new Error("Failed to get identity ID");
       }
 
       // Get AWS credentials
       const getCredentialsCommand = new GetCredentialsForIdentityCommand({
         IdentityId,
         Logins: {
-          [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]: this.currentSession.idToken,
+          [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]:
+            this.currentSession.idToken,
         },
       });
-      
-      const credentialsResponse = await this.identityClient.send(getCredentialsCommand);
-      
+
+      const credentialsResponse = await this.identityClient.send(
+        getCredentialsCommand,
+      );
+
       if (!credentialsResponse.Credentials) {
-        throw new Error('Failed to get credentials');
+        throw new Error("Failed to get credentials");
       }
 
       // Update session with credentials
       this.currentSession = {
         ...this.currentSession,
         credentials: {
-          accessKeyId: credentialsResponse.Credentials.AccessKeyId || '',
-          secretAccessKey: credentialsResponse.Credentials.SecretKey || '',
-          sessionToken: credentialsResponse.Credentials.SessionToken || '',
+          accessKeyId: credentialsResponse.Credentials.AccessKeyId || "",
+          secretAccessKey: credentialsResponse.Credentials.SecretKey || "",
+          sessionToken: credentialsResponse.Credentials.SessionToken || "",
           expiration: credentialsResponse.Credentials.Expiration || new Date(),
         },
       };
 
       return this.currentSession;
     } catch (error) {
-      console.error('Error getting credentials:', error);
+      console.error("Error getting credentials:", error);
       return null;
     }
   }
@@ -205,7 +211,10 @@ export function configureCognito(config: CognitoConfig): void {
   CognitoAuth.getInstance().configure(config);
 }
 
-export async function login(username: string, password: string): Promise<AuthResult> {
+export async function login(
+  username: string,
+  password: string,
+): Promise<AuthResult> {
   return CognitoAuth.getInstance().signIn(username, password);
 }
 
