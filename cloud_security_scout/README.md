@@ -83,6 +83,18 @@ To get started with the Cloud Security Scout project, follow these steps:
 
 7. **Contribute**: If you'd like to contribute to the project, feel free to submit a pull request with your changes.
 
+## Pre-Commit Hooks
+
+This project uses pre-commit hooks to enforce code quality and consistency. Before you commit any changes, a series of automated checks will run to ensure your code meets the project's standards. These checks include:
+
+- **Secret Detection**: Sc
+  ly committed API keys, passwords, or other secrets.
+- **Code Formatting**: Automatically formats your code to maintain a consistent style.
+- **Syntax Validation**: Checks for syntax errors in JSON and YAML files.
+- **General Code Quality**: Enforces best practices like removing trailing whitespace and ensuring files end with a newline.
+
+If any of these checks fail, the commit will be aborted, and you will see an error message indicating what needs to be fixed. This helps to prevent common mistakes and maintain a high-quality codebase.
+
 ## Contact
 
 For any questions or inquiries, please contact me at ceesay.ml@outlook.com.
