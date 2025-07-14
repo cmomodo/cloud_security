@@ -14,10 +14,10 @@ This project demonstrates best practices in cloud security, AWS integration, and
 
 Pareto - Principle: Focus on the 20% of security measures that will yield 80% of the protection.
 
-compreshensive discovery
-consistent evaluation
-timely protection
-prioritising remediation
+- **Comprehensive discovery**
+- **Consistent evaluation**
+- **Timely protection**
+- **Prioritizing remediation**
 
 ### File Structure
 

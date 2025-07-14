@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { SecurityScoutStack } from "../lib/security_scout-stack";
+import { SecurityScoutSnsStack } from "../lib/security-scout-sns";
+import { SecurityScoutDynamoDBStack } from "../lib/security-scout-dynamodb";
 
 const app = new cdk.App();
-new SecurityScoutStack(app, "SecurityScoutStack", {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
-});
+
+// Deploy SNS stack first since other stacks depend on it
+const snsStack = new SecurityScoutSnsStack(app, "SecurityScoutSnsStack", {});
+
+// Deploy DynamoDB stack
+new SecurityScoutDynamoDBStack(app, "SecurityScoutDynamoDBStack", {});
+
+// Deploy main stack (depends on SNS stack)
+new SecurityScoutStack(app, "SecurityScoutStack", {});

@@ -121,8 +121,7 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
       }
 
       // If no movies in DB, try to fetch from API and save to DB
-      const url =
-        "https://imdb236.p.rapidapi.com/api/imdb/india/trending-tamil";
+      const url = `${import.meta.env.VITE_RAPIDAPI_URL}?type=movie&genre=Action&rows=25&sortOrder=ASC&sortField=id`;
       const response = await fetch(url, {
         headers: {
           "x-rapidapi-key": import.meta.env.VITE_RAPIDAPI_KEY,
@@ -136,12 +135,22 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
 
       const data = await response.json();
 
-      const mapped: Movie[] = data.map((m: any, index: number) => ({
+      // Filter for action movies with complete data
+      const actionMovies = data.results?.filter((movie: any) =>
+        movie.primaryTitle &&
+        movie.description &&
+        movie.startYear &&
+        (movie.countriesOfOrigin?.includes("US") ||
+         movie.averageRating > 4.0 ||
+         movie.numVotes > 100)
+      ) || [];
+
+      const mapped: Movie[] = actionMovies.map((m: any, index: number) => ({
         id: m.id || String(index + 1),
-        imdb_id: m.imdb_id || m.id,
-        title: m.primaryTitle || m.title || "Unknown",
+        imdb_id: m.id,
+        title: m.primaryTitle || "Unknown",
         year: Number(m.startYear) || new Date().getFullYear(),
-        genre: Array.isArray(m.genres) ? m.genres.join(", ") : "Unknown",
+        genre: Array.isArray(m.genres) ? m.genres.join(", ") : "Action",
         director: "Unknown",
         rating: Number(m.averageRating) || 0,
         plot: m.description || "",
@@ -211,7 +220,7 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
           Movie Dashboard
         </h2>
         <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "20px" }}>
-          Showing {movies.length} movies from DynamoDB
+          Showing {movies.length} action movies from DynamoDB
         </p>
         <button className="refresh-button" onClick={fetchMovies}>
           Refresh
