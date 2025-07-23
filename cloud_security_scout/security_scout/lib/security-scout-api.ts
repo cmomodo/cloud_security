@@ -53,7 +53,25 @@ export class SecurityScoutApiStack extends cdk.Stack {
             {
               statusCode: "200",
               responseTemplates: {
-                "application/json": `$input.path('$.Items')`,
+                "application/json": `
+#set($items = $input.path('$.Items'))
+[
+#foreach($item in $items)
+  {
+    "id": "$item.id.S",
+    "timestamp": $item.timestamp.N,
+    "imdb_id": "$item.imdb_id.S",
+    "title": "$item.title.S",
+    "year": $item.year.N,
+    "genre": "$item.genre.S",
+    "director": "$item.director.S",
+    "rating": $item.rating.N,
+    "plot": "$item.plot.S",
+    "poster": "$item.poster.S"
+  }#if($foreach.hasNext),#end
+#end
+]
+                `,
               },
             },
           ],
@@ -80,7 +98,14 @@ export class SecurityScoutApiStack extends cdk.Stack {
   "Item": {
     "id": { "S": "$inputRoot.id" },
     "timestamp": { "N": "$inputRoot.timestamp" },
-    "data": { "S": "$inputRoot.data" }
+    "imdb_id": { "S": "$inputRoot.imdb_id" },
+    "title": { "S": "$inputRoot.title" },
+    "year": { "N": "$inputRoot.year" },
+    "genre": { "S": "$inputRoot.genre" },
+    "director": { "S": "$inputRoot.director" },
+    "rating": { "N": "$inputRoot.rating" },
+    "plot": { "S": "$inputRoot.plot" },
+    "poster": { "S": "$inputRoot.poster" }
   }
 }
           `,
@@ -137,7 +162,14 @@ export class SecurityScoutApiStack extends cdk.Stack {
 {
   "id": "$item.id.S",
   "timestamp": $item.timestamp.N,
-  "data": "$item.data.S"
+  "imdb_id": "$item.imdb_id.S",
+  "title": "$item.title.S",
+  "year": $item.year.N,
+  "genre": "$item.genre.S",
+  "director": "$item.director.S",
+  "rating": $item.rating.N,
+  "plot": "$item.plot.S",
+  "poster": "$item.poster.S"
 }
                 `,
               },

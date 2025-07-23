@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
+import { movieService } from "../services/movieService";
+import MovieForm from "./MovieForm";
 
 interface MovieDashboardProps {
   client: ReturnType<typeof generateClient<Schema>>;
@@ -23,6 +25,7 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   // Sample movie data for demonstration
   const sampleMovies: Movie[] = [
@@ -99,7 +102,18 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
       setLoading(true);
       setError(null);
 
-      // Fetch from Amplify DynamoDB
+      // Try to fetch from API Gateway first
+      try {
+        const apiMovies = await movieService.getAllMovies();
+        if (apiMovies.length > 0) {
+          setMovies(apiMovies);
+          return;
+        }
+      } catch (apiError) {
+        console.log("API Gateway fetch failed, trying Amplify...");
+      }
+
+      // Fallback to Amplify DynamoDB
       const { data: movieRecords } = await client.models.Movie.list();
 
       const dbMovies: Movie[] = movieRecords.map((record) => ({
@@ -120,7 +134,7 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
         return;
       }
 
-      // If no movies in DB, try to fetch from API and save to DB
+      // If no movies in DB, try to fetch from external API and save to DB
       const url = `${import.meta.env.VITE_RAPIDAPI_URL}?type=movie&genre=Action&rows=25&sortOrder=ASC&sortField=id`;
       const response = await fetch(url, {
         headers: {
@@ -158,7 +172,7 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
         timestamp: Date.now(),
       }));
 
-      // Save movies to DynamoDB
+      // Save movies to DynamoDB via Amplify
       for (const movie of mapped) {
         await client.models.Movie.create({
           imdb_id: movie.imdb_id,
@@ -181,6 +195,10 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMovieAdded = (newMovie: Movie) => {
+    setMovies(prevMovies => [newMovie, ...prevMovies]);
   };
 
   useEffect(() => {
@@ -222,9 +240,14 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
         <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "20px" }}>
           Showing {movies.length} action movies from DynamoDB
         </p>
-        <button className="refresh-button" onClick={fetchMovies}>
-          Refresh
-        </button>
+        <div className="dashboard-buttons">
+          <button className="refresh-button" onClick={fetchMovies}>
+            Refresh
+          </button>
+          <button className="add-button" onClick={() => setShowForm(true)}>
+            + Add Movie
+          </button>
+        </div>
       </div>
 
       <div className="movie-grid">
@@ -258,6 +281,13 @@ const MovieDashboard: React.FC<MovieDashboardProps> = ({ client }) => {
           <h3>No movies found</h3>
           <p>Start by adding some movies to your collection!</p>
         </div>
+      )}
+
+      {showForm && (
+        <MovieForm
+          onMovieAdded={handleMovieAdded}
+          onClose={() => setShowForm(false)}
+        />
       )}
     </div>
   );
